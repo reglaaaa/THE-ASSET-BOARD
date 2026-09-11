@@ -47,11 +47,14 @@ export default function Home() {
   }
 
   async function handleCreate(content: string, category: Category, urgent: boolean) {
-    const { error } = await supabase
-      .from("posts")
-      .insert({ content, category, is_urgent: urgent });
+    const { error } = await supabase.rpc("create_post", {
+      p_content: content,
+      p_category: category,
+      p_is_urgent: urgent,
+      p_anon_id: getAnonId()
+    });
     if (error) {
-      alert("Couldn't post that — please try again.");
+      alert(error.message || "Couldn't post that — please try again.");
       return;
     }
     await loadPosts();
@@ -60,6 +63,7 @@ export default function Home() {
   async function toggleLike(postId: string) {
     const anonId = getAnonId();
     const isLiked = liked.has(postId);
+    const prevLiked = new Set(liked);
     const next = new Set(liked);
 
     // optimistic UI
@@ -70,18 +74,30 @@ export default function Home() {
           : p
       )
     );
+    if (isLiked) next.delete(postId);
+    else next.add(postId);
+    setLiked(next);
+    persistLiked(next);
 
-    if (isLiked) {
-      next.delete(postId);
-      setLiked(next);
-      persistLiked(next);
-      await supabase.from("likes").delete().eq("post_id", postId).eq("anon_id", anonId);
-    } else {
-      next.add(postId);
-      setLiked(next);
-      persistLiked(next);
-      await supabase.from("likes").insert({ post_id: postId, anon_id: anonId });
+    const { error } = isLiked
+      ? await supabase.from("likes").delete().eq("post_id", postId).eq("anon_id", anonId)
+      : await supabase.from("likes").insert({ post_id: postId, anon_id: anonId });
+
+    if (error) {
+      // Roll back the optimistic change — the write didn't actually happen
+      // (e.g. rate limited, or a duplicate insert from a double-click).
+      setLiked(prevLiked);
+      persistLiked(prevLiked);
+      await loadPosts();
+      if (!error.message?.toLowerCase().includes("duplicate")) {
+        alert(error.message || "Couldn't save that — please try again.");
+      }
+      return;
     }
+
+    // Reconcile with the server's real count rather than trusting the
+    // optimistic math, so the number shown always matches what's stored.
+    await loadPosts();
   }
 
   const visiblePosts = useMemo(() => {
