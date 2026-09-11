@@ -13,7 +13,7 @@ export function Composer({
   onSubmit: (content: string, category: Category, urgent: boolean) => Promise<void>;
 }) {
   const [content, setContent] = useState("");
-  const [category, setCategory] = useState<Category>("other");
+  const [category, setCategory] = useState<Category>("concern");
   const [urgent, setUrgent] = useState(false);
   const [posting, setPosting] = useState(false);
 
@@ -39,11 +39,11 @@ export function Composer({
         placeholder="What's the issue? No names needed."
         rows={3}
         maxLength={MAX}
-        className="w-full resize-none bg-transparent text-[15px] text-[#f2ecdb] placeholder:text-ink-600 focus:outline-none"
+        className="w-full resize-none bg-transparent text-[15px] text-[#f2ecdb] placeholder:text-ink-400 focus:outline-none"
       />
 
-      <div className="mt-2 flex items-center justify-between border-t border-ink-700 pt-2.5">
-        <div className="flex items-center gap-1">
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-2 border-t border-ink-700 pt-2.5">
+        <div className="flex items-center gap-1.5">
           {CATEGORIES.map(({ value, label, icon: Icon }) => (
             <button
               key={value}
@@ -51,33 +51,35 @@ export function Composer({
               aria-label={label}
               aria-pressed={category === value}
               onClick={() => setCategory(value)}
-              className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
+              className={`flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors ${
                 category === value
                   ? "bg-gold-liquid-soft text-ink-950"
-                  : "text-ink-600 hover:bg-ink-700 hover:text-gold-300"
+                  : "text-ink-400 hover:bg-ink-700 hover:text-gold-300"
               }`}
             >
-              <Icon size={15} strokeWidth={2.2} />
+              <Icon size={14} strokeWidth={2.2} />
+              {label}
             </button>
           ))}
 
           <button
-            title="Mark as urgent"
+            title="Mark as urgent — highlights this post in red for the council"
             aria-label="Mark as urgent"
             aria-pressed={urgent}
             onClick={() => setUrgent((v) => !v)}
-            className={`ml-1 flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
+            className={`ml-0.5 flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors ${
               urgent
                 ? "bg-blood-500 text-ink-950"
-                : "text-ink-600 hover:bg-blood-700/30 hover:text-blood-400"
+                : "text-ink-400 hover:bg-blood-700/30 hover:text-blood-400"
             }`}
           >
-            <TriangleAlert size={15} strokeWidth={2.2} />
+            <TriangleAlert size={14} strokeWidth={2.2} />
+            Urgent
           </button>
         </div>
 
         <div className="flex items-center gap-2.5">
-          <span className={`text-xs ${content.length > MAX - 40 ? "text-blood-400" : "text-ink-600"}`}>
+          <span className={`text-xs ${content.length > MAX - 40 ? "text-blood-400" : "text-ink-400"}`}>
             {MAX - content.length}
           </span>
           <button

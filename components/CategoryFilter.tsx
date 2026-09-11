@@ -18,13 +18,14 @@ export function CategoryFilter({
         aria-label="All categories"
         aria-pressed={active === "all"}
         onClick={() => onChange("all")}
-        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition-colors ${
+        className={`flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors ${
           active === "all"
             ? "border-gold-400 bg-gold-liquid-soft text-ink-950"
-            : "border-ink-600 text-ink-600 hover:text-gold-300"
+            : "border-ink-600 text-ink-400 hover:text-gold-300"
         }`}
       >
-        <LayoutGrid size={15} strokeWidth={2.2} />
+        <LayoutGrid size={14} strokeWidth={2.2} />
+        All
       </button>
       {CATEGORIES.map(({ value, label, icon: Icon }) => (
         <button
@@ -33,13 +34,14 @@ export function CategoryFilter({
           aria-label={label}
           aria-pressed={active === value}
           onClick={() => onChange(value)}
-          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition-colors ${
+          className={`flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors ${
             active === value
               ? "border-gold-400 bg-gold-liquid-soft text-ink-950"
-              : "border-ink-600 text-ink-600 hover:text-gold-300"
+              : "border-ink-600 text-ink-400 hover:text-gold-300"
           }`}
         >
-          <Icon size={15} strokeWidth={2.2} />
+          <Icon size={14} strokeWidth={2.2} />
+          {label}
         </button>
       ))}
     </div>

@@ -34,7 +34,7 @@ export function PostCard({
           : "border-ink-600 bg-ink-800/60 hover:border-gold-600/40"
       }`}
     >
-      <div className="mb-2.5 flex items-center justify-between text-xs text-ink-600">
+      <div className="mb-2.5 flex items-center justify-between text-xs text-ink-400">
         <span className="inline-flex items-center gap-1.5 rounded-full border border-ink-600 px-2.5 py-1 text-gold-300">
           <Icon size={13} strokeWidth={2} />
           {meta.label}
@@ -62,7 +62,7 @@ export function PostCard({
           className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm transition-all ${
             liked
               ? "bg-gold-liquid-soft text-ink-950 font-medium shadow-gold"
-              : "text-ink-600 hover:text-gold-300 hover:bg-ink-700/60"
+              : "text-ink-400 hover:text-gold-300 hover:bg-ink-700/60"
           }`}
         >
           <Flame size={16} strokeWidth={2.2} fill={liked ? "#08070a" : "none"} />
