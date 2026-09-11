@@ -12,12 +12,7 @@ if (!url || !anonKey) {
 
 export const supabase = createClient(url, anonKey);
 
-export type Category =
-  | "academics"
-  | "facilities"
-  | "safety"
-  | "administration"
-  | "other";
+export type Category = "concern" | "suggestion";
 
 export type Post = {
   id: string;
