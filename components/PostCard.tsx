@@ -3,6 +3,7 @@
 import { Flame, TriangleAlert } from "lucide-react";
 import { categoryMeta } from "@/lib/categories";
 import type { Post } from "@/lib/supabaseClient";
+import { CommentSection } from "@/components/CommentSection";
 
 function timeAgo(iso: string) {
   const diff = Date.now() - new Date(iso).getTime();
@@ -54,7 +55,7 @@ export function PostCard({
         {post.content}
       </p>
 
-      <div className="mt-3 flex items-center gap-4">
+      <div className="mt-3 flex items-center gap-1">
         <button
           onClick={() => onToggleLike(post.id)}
           aria-pressed={liked}
@@ -68,6 +69,8 @@ export function PostCard({
           <Flame size={16} strokeWidth={2.2} fill={liked ? "#08070a" : "none"} />
           {post.likes_count}
         </button>
+
+        <CommentSection postId={post.id} commentsCount={post.comments_count} />
       </div>
     </article>
   );
