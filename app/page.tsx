@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Clock, TrendingUp } from "lucide-react";
+import Link from "next/link";
+import { Clock, ShieldCheck, TrendingUp } from "lucide-react";
 import { supabase, type Post, type Category } from "@/lib/supabaseClient";
 import { getAnonId, getLikedSet, persistLiked } from "@/lib/anonId";
 import { Logo } from "@/components/Logo";
@@ -96,6 +97,13 @@ export default function Home() {
       <header className="sticky top-0 z-10 -mx-4 border-b border-ink-700 bg-ink-950/85 px-4 pb-3 pt-5 backdrop-blur">
         <div className="flex items-center justify-between">
           <Logo />
+          <Link
+            href="/transparency"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-ink-600 px-3 py-1.5 text-xs text-ink-400 hover:text-gold-300"
+          >
+            <ShieldCheck size={13} strokeWidth={2.2} />
+            Transparency
+          </Link>
         </div>
         <p className="mt-1.5 text-xs tracking-wide text-ink-400">
           Engineered to Serve. United to Lead.
