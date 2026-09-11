@@ -22,3 +22,11 @@ export type Post = {
   likes_count: number;
   created_at: string;
 };
+
+export type Article = {
+  id: string;
+  title: string;
+  body: string;
+  image_url: string | null;
+  created_at: string;
+};
