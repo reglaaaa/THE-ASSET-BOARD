@@ -20,6 +20,14 @@ export type Post = {
   category: Category;
   is_urgent: boolean;
   likes_count: number;
+  comments_count: number;
+  created_at: string;
+};
+
+export type Comment = {
+  id: string;
+  post_id: string;
+  content: string;
   created_at: string;
 };
 
