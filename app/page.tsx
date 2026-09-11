@@ -97,7 +97,7 @@ export default function Home() {
         <div className="flex items-center justify-between">
           <Logo />
         </div>
-        <p className="mt-1.5 text-xs tracking-wide text-ink-600">
+        <p className="mt-1.5 text-xs tracking-wide text-ink-400">
           Engineered to Serve. United to Lead.
         </p>
 
@@ -109,7 +109,7 @@ export default function Home() {
               aria-pressed={sort === "new"}
               onClick={() => setSort("new")}
               className={`flex h-7 w-7 items-center justify-center rounded-full ${
-                sort === "new" ? "bg-gold-liquid-soft text-ink-950" : "text-ink-600"
+                sort === "new" ? "bg-gold-liquid-soft text-ink-950" : "text-ink-400"
               }`}
             >
               <Clock size={13} strokeWidth={2.2} />
@@ -119,7 +119,7 @@ export default function Home() {
               aria-pressed={sort === "top"}
               onClick={() => setSort("top")}
               className={`flex h-7 w-7 items-center justify-center rounded-full ${
-                sort === "top" ? "bg-gold-liquid-soft text-ink-950" : "text-ink-600"
+                sort === "top" ? "bg-gold-liquid-soft text-ink-950" : "text-ink-400"
               }`}
             >
               <TrendingUp size={13} strokeWidth={2.2} />
@@ -134,11 +134,11 @@ export default function Home() {
 
       <section className="mt-4 flex flex-col gap-2.5">
         {loading && (
-          <p className="py-10 text-center text-sm text-ink-600">Loading the feed…</p>
+          <p className="py-10 text-center text-sm text-ink-400">Loading the feed…</p>
         )}
 
         {!loading && visiblePosts.length === 0 && (
-          <p className="py-10 text-center text-sm text-ink-600">
+          <p className="py-10 text-center text-sm text-ink-400">
             Nothing here yet. Be the first to raise it.
           </p>
         )}

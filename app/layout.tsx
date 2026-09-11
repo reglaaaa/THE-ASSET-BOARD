@@ -17,7 +17,10 @@ const body = Inter({
 export const metadata: Metadata = {
   title: "THE ASSET — Anonymous Student Feedback",
   description:
-    "Engineered to Serve. United to Lead. Post concerns anonymously, get them seen."
+    "Engineered to Serve. United to Lead. Post concerns anonymously, get them seen.",
+  icons: {
+    icon: "/favicon.png"
+  }
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
