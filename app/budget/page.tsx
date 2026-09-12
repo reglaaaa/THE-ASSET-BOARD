@@ -8,6 +8,7 @@ import {
   Lock,
   Pencil,
   Plus,
+  ShieldCheck,
   Trash2,
   TrendingDown,
   TriangleAlert,
@@ -20,6 +21,7 @@ import {
   type Project,
   type ProjectStatus
 } from "@/lib/supabaseClient";
+import { useAdmin } from "@/lib/useAdmin";
 import { Logo } from "@/components/Logo";
 import { EmptyState } from "@/components/EmptyState";
 import { BudgetSkeleton } from "@/components/skeletons/BudgetSkeleton";
@@ -164,22 +166,7 @@ function AdminUnlockBar({
   const [open, setOpen] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
 
-  if (unlockedPassword) {
-    return (
-      <div className="flex items-center justify-between rounded-xl border border-gold-600/40 bg-ink-800/60 px-3.5 py-2.5">
-        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-gold-300">
-          <Lock size={13} strokeWidth={2.2} />
-          Admin mode — you can add, edit, or remove entries below.
-        </span>
-        <button
-          onClick={onLock}
-          className="text-xs text-ink-400 hover:text-blood-400"
-        >
-          Lock
-        </button>
-      </div>
-    );
-  }
+  if (unlockedPassword) return null;
 
   if (!open) {
     return (
@@ -992,10 +979,7 @@ export default function BudgetPage() {
   const [spendingOpen, setSpendingOpen] = useState(false);
   const [projectsOpen, setProjectsOpen] = useState(false);
 
-  // Kept only in memory for this tab's session, mirroring the transparency
-  // page's admin password handling, so it isn't retyped for every action.
-  const [unlockedPassword, setUnlockedPassword] = useState<string | null>(null);
-  const adminMode = unlockedPassword !== null;
+  const { isAdmin: adminMode, password: unlockedPassword, login, logout } = useAdmin();
 
   useEffect(() => {
     load();
@@ -1031,7 +1015,21 @@ export default function BudgetPage() {
   return (
     <main className="mx-auto flex min-h-screen max-w-xl flex-col px-4 pb-24">
       <header className="sticky top-0 z-10 -mx-4 border-b border-ink-700 bg-ink-950/85 px-4 pb-3 pt-5 backdrop-blur">
-        <Logo />
+        <div className="flex items-start justify-between gap-3">
+          <Logo />
+          {adminMode && (
+            <button
+              onClick={() => {
+                if (window.confirm("Exit admin mode?")) logout();
+              }}
+              title="Admin mode, tap to exit"
+              className="mt-0.5 flex shrink-0 items-center gap-1.5 rounded-full border border-gold-600/50 bg-gold-liquid-soft/[0.12] px-2.5 py-1.5 text-[11px] font-medium text-gold-300"
+            >
+              <ShieldCheck size={13} strokeWidth={2.4} />
+              Admin
+            </button>
+          )}
+        </div>
         <p className="mt-1.5 text-xs tracking-wide text-ink-400">
           Budget Dashboard — where the money comes from, where it goes.
         </p>
@@ -1045,8 +1043,8 @@ export default function BudgetPage() {
         <section className="mt-4 flex flex-col gap-3">
           <AdminUnlockBar
             unlockedPassword={unlockedPassword}
-            onUnlock={setUnlockedPassword}
-            onLock={() => setUnlockedPassword(null)}
+            onUnlock={login}
+            onLock={logout}
           />
 
           {/* 1. Total Yearly Budget */}
@@ -1061,7 +1059,7 @@ export default function BudgetPage() {
               sources={sources}
               adminMode={adminMode}
               unlockedPassword={unlockedPassword}
-              onWrongPassword={() => setUnlockedPassword(null)}
+              onWrongPassword={logout}
               onChanged={load}
             />
           </ExpandCard>
@@ -1078,7 +1076,7 @@ export default function BudgetPage() {
               expenses={expenses}
               adminMode={adminMode}
               unlockedPassword={unlockedPassword}
-              onWrongPassword={() => setUnlockedPassword(null)}
+              onWrongPassword={logout}
               onChanged={load}
             />
           </ExpandCard>
@@ -1127,7 +1125,7 @@ export default function BudgetPage() {
               projects={projects}
               adminMode={adminMode}
               unlockedPassword={unlockedPassword}
-              onWrongPassword={() => setUnlockedPassword(null)}
+              onWrongPassword={logout}
               onChanged={load}
             />
           </ExpandCard>
