@@ -122,7 +122,7 @@ export default function TransparencyPage() {
           )}
         </div>
         <p className="mt-1.5 text-xs tracking-wide text-ink-400">
-          Transparency — council projects, updates, and how things are moving.
+          Transparency Article
         </p>
       </header>
 
