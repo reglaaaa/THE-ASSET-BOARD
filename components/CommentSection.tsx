@@ -93,13 +93,13 @@ export function CommentSection({
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setSscError(json.error ?? "Couldn't post that reply — please try again.");
+        setSscError(json.error ?? "Couldn't post that reply, please try again.");
         return;
       }
       setComments((prev) => [...prev, json.comment as Comment]);
       setSscDraft("");
     } catch {
-      setSscError("Network error — please try again.");
+      setSscError("Network error, please try again.");
     } finally {
       setSscPosting(false);
     }
@@ -222,18 +222,26 @@ export function CommentSection({
           {error && <p className="text-[11px] text-blood-400">{error}</p>}
 
           {isAdmin && (
-            <div className="mt-1 flex items-center gap-2 rounded-full border border-gold-600/40 bg-ink-900 pl-3 pr-1">
-              <Image src="/logo-mark.png" alt="" width={14} height={14} className="shrink-0" />
-              <input
-                value={sscDraft}
-                onChange={(e) => setSscDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleSendOfficial();
-                }}
-                placeholder="Reply as SSC (official)…"
-                maxLength={MAX}
-                className="min-w-0 flex-1 bg-transparent py-1.5 text-xs text-[#f2ecdb] placeholder:text-gold-300/60 focus:outline-none"
-              />
+            <div className="mt-1 flex items-center gap-2">
+              <div className="relative flex-1">
+                <Image
+                  src="/logo-mark.png"
+                  alt=""
+                  width={13}
+                  height={13}
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2"
+                />
+                <input
+                  value={sscDraft}
+                  onChange={(e) => setSscDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSendOfficial();
+                  }}
+                  placeholder="Reply as SSC (official)…"
+                  maxLength={MAX}
+                  className="w-full rounded-full border border-gold-600/40 bg-ink-900 py-1.5 pl-8 pr-3 text-xs text-[#f2ecdb] placeholder:text-gold-300/60 focus:border-gold-500 focus:outline-none"
+                />
+              </div>
               <button
                 onClick={handleSendOfficial}
                 disabled={!sscDraft.trim() || sscPosting}

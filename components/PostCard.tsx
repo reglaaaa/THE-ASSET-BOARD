@@ -75,13 +75,13 @@ export function PostCard({
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(json.error ?? "Couldn't save that — please try again.");
+        setError(json.error ?? "Couldn't save that, please try again.");
         return;
       }
       setEditing(false);
       onChanged?.();
     } catch {
-      setError("Network error — please try again.");
+      setError("Network error, please try again.");
     } finally {
       setSaving(false);
     }
@@ -218,7 +218,7 @@ export function PostCard({
         </p>
       )}
 
-      <div className="mt-3 flex items-center gap-1">
+      <div className="mt-3 flex items-start gap-1">
         <button
           onClick={() => {
             onToggleLike(post.id);
@@ -226,7 +226,7 @@ export function PostCard({
           }}
           aria-pressed={liked}
           aria-label={liked ? "Remove support" : "Support this"}
-          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm transition-all ${
+          className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm transition-all ${
             liked
               ? "bg-gold-liquid-soft text-ink-950 font-medium shadow-gold"
               : "text-ink-400 hover:text-gold-300 hover:bg-ink-700/60"
