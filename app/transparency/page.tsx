@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Lock, Plus, Trash2, X } from "lucide-react";
+import { ArrowLeft, Lock, PiggyBank, Plus, Trash2, X } from "lucide-react";
 import { supabase, type Article } from "@/lib/supabaseClient";
 import { Logo } from "@/components/Logo";
 
@@ -108,13 +108,22 @@ export default function TransparencyPage() {
       <header className="sticky top-0 z-10 -mx-4 border-b border-ink-700 bg-ink-950/85 px-4 pb-3 pt-5 backdrop-blur">
         <div className="flex items-center justify-between">
           <Logo />
-          <Link
-            href="/"
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-ink-600 px-3 py-1.5 text-xs text-ink-400 hover:text-gold-300"
-          >
-            <ArrowLeft size={13} strokeWidth={2.2} />
-            Feed
-          </Link>
+          <div className="flex shrink-0 items-center gap-2">
+            <Link
+              href="/budget"
+              className="inline-flex items-center gap-1.5 rounded-full border border-ink-600 px-3 py-1.5 text-xs text-ink-400 hover:text-gold-300"
+            >
+              <PiggyBank size={13} strokeWidth={2.2} />
+              Budget
+            </Link>
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1.5 rounded-full border border-ink-600 px-3 py-1.5 text-xs text-ink-400 hover:text-gold-300"
+            >
+              <ArrowLeft size={13} strokeWidth={2.2} />
+              Feed
+            </Link>
+          </div>
         </div>
         <p className="mt-1.5 text-xs tracking-wide text-ink-400">
           Transparency — council projects, updates, and how things are moving.
