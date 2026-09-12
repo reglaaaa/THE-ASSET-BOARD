@@ -12,7 +12,6 @@ function getClientIp(req: NextRequest) {
   return req.headers.get("x-real-ip") ?? "unknown";
 }
 
-// Same shared admin-auth bucket as the other admin routes.
 async function withinRateLimit(ip: string) {
   try {
     const { data, error } = await supabaseAdmin().rpc("check_rate_limit", {
@@ -20,28 +19,18 @@ async function withinRateLimit(ip: string) {
       p_max_hits: 5,
       p_window_seconds: 60
     });
-    if (error) {
-      console.error("Rate limit check failed:", error.message);
-      return true;
-    }
+    if (error) return true;
     return data === true;
-  } catch (err) {
-    console.error("Rate limit check threw:", err);
+  } catch {
     return true;
   }
 }
 
-// Posts an official council (SSC) reply on a post's comment thread. Goes
-// through the service-role client (bypassing RLS, same as /api/articles),
-// so it isn't subject to the anonymous per-device comment rate limit, and
-// is flagged is_official so the feed can badge it with the council logo.
+// Posts an official council (SSC) reply, flagged is_official.
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
   if (!(await withinRateLimit(ip))) {
-    return NextResponse.json(
-      { error: "Too many attempts — please wait a minute and try again." },
-      { status: 429 }
-    );
+    return NextResponse.json({ error: "Too many attempts, please wait a minute." }, { status: 429 });
   }
 
   const body = await req.json().catch(() => null);
@@ -73,14 +62,11 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ comment: data }, { status: 201 });
 }
 
-// Council admin removal of any comment (anonymous or official).
+// Admin removal of any comment.
 export async function DELETE(req: NextRequest) {
   const ip = getClientIp(req);
   if (!(await withinRateLimit(ip))) {
-    return NextResponse.json(
-      { error: "Too many attempts — please wait a minute and try again." },
-      { status: 429 }
-    );
+    return NextResponse.json({ error: "Too many attempts, please wait a minute." }, { status: 429 });
   }
 
   const body = await req.json().catch(() => null);
