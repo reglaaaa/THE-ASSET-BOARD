@@ -12,8 +12,6 @@ function getClientIp(req: NextRequest) {
   return req.headers.get("x-real-ip") ?? "unknown";
 }
 
-// Shares the same admin-auth bucket as the other admin routes (articles,
-// budget, comments), so brute-forcing any one of them locks out the rest.
 async function withinRateLimit(ip: string) {
   try {
     const { data, error } = await supabaseAdmin().rpc("check_rate_limit", {
@@ -21,27 +19,18 @@ async function withinRateLimit(ip: string) {
       p_max_hits: 5,
       p_window_seconds: 60
     });
-    if (error) {
-      console.error("Rate limit check failed:", error.message);
-      return true;
-    }
+    if (error) return true;
     return data === true;
-  } catch (err) {
-    console.error("Rate limit check threw:", err);
+  } catch {
     return true;
   }
 }
 
-// Council admin edit of any post — content, category, and/or urgent flag.
-// Goes through the service-role client (bypassing RLS, same pattern as
-// /api/articles and /api/budget) since posts has no public update policy.
+// Admin edit of a post: content, category, and/or urgent flag.
 export async function PATCH(req: NextRequest) {
   const ip = getClientIp(req);
   if (!(await withinRateLimit(ip))) {
-    return NextResponse.json(
-      { error: "Too many attempts — please wait a minute and try again." },
-      { status: 429 }
-    );
+    return NextResponse.json({ error: "Too many attempts, please wait a minute." }, { status: 429 });
   }
 
   const body = await req.json().catch(() => null);
@@ -95,10 +84,7 @@ export async function PATCH(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const ip = getClientIp(req);
   if (!(await withinRateLimit(ip))) {
-    return NextResponse.json(
-      { error: "Too many attempts — please wait a minute and try again." },
-      { status: 429 }
-    );
+    return NextResponse.json({ error: "Too many attempts, please wait a minute." }, { status: 429 });
   }
 
   const body = await req.json().catch(() => null);
