@@ -46,10 +46,31 @@ const config: Config = {
         shimmer: {
           "0%": { backgroundPosition: "0% 50%" },
           "100%": { backgroundPosition: "200% 50%" }
+        },
+        "fade-slide-in": {
+          "0%": { opacity: "0", transform: "translateY(8px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" }
+        },
+        "fade-in": {
+          "0%": { opacity: "0" },
+          "100%": { opacity: "1" }
+        },
+        "pop": {
+          "0%": { transform: "scale(1)" },
+          "45%": { transform: "scale(1.35)" },
+          "100%": { transform: "scale(1)" }
+        },
+        "sheet-up": {
+          "0%": { transform: "translateY(100%)" },
+          "100%": { transform: "translateY(0)" }
         }
       },
       animation: {
-        shimmer: "shimmer 6s linear infinite"
+        shimmer: "shimmer 6s linear infinite",
+        "fade-slide-in": "fade-slide-in 0.35s ease-out both",
+        "fade-in": "fade-in 0.25s ease-out both",
+        pop: "pop 0.35s ease-out",
+        "sheet-up": "sheet-up 0.28s cubic-bezier(0.32, 0.72, 0, 1)"
       }
     }
   },
