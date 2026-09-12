@@ -3,12 +3,15 @@
 import { useEffect, useState } from "react";
 import { Lock, Plus, ShieldCheck, Trash2, X } from "lucide-react";
 import { supabase, type Article } from "@/lib/supabaseClient";
+import { useAdmin } from "@/lib/useAdmin";
 import { Logo } from "@/components/Logo";
 import { EmptyState } from "@/components/EmptyState";
 
 export default function TransparencyPage() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const { isAdmin, password: adminPassword, login, logout } = useAdmin();
 
   const [composerOpen, setComposerOpen] = useState(false);
   const [password, setPassword] = useState("");
@@ -17,10 +20,6 @@ export default function TransparencyPage() {
   const [imageUrl, setImageUrl] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Kept only in memory for this tab's session, so admins don't have to
-  // retype the password for every delete after they've posted once.
-  const [unlockedPassword, setUnlockedPassword] = useState<string | null>(null);
 
   useEffect(() => {
     loadArticles();
@@ -48,7 +47,8 @@ export default function TransparencyPage() {
 
   async function handlePost() {
     setError(null);
-    if (!password || !title.trim() || !body.trim()) {
+    const pwd = adminPassword ?? password;
+    if (!pwd || !title.trim() || !body.trim()) {
       setError("Password, title, and body are all required.");
       return;
     }
@@ -58,7 +58,7 @@ export default function TransparencyPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          password,
+          password: pwd,
           title: title.trim(),
           body: body.trim(),
           image_url: imageUrl.trim() || undefined
@@ -69,7 +69,7 @@ export default function TransparencyPage() {
         setError(json.error ?? "Something went wrong.");
         return;
       }
-      setUnlockedPassword(password);
+      login(pwd);
       setTitle("");
       setBody("");
       setImageUrl("");
@@ -77,14 +77,14 @@ export default function TransparencyPage() {
       setComposerOpen(false);
       await loadArticles();
     } catch {
-      setError("Network error — please try again.");
+      setError("Network error, please try again.");
     } finally {
       setSubmitting(false);
     }
   }
 
   async function handleDelete(id: string) {
-    const pwd = unlockedPassword ?? window.prompt("Admin password to delete this post:");
+    const pwd = adminPassword ?? window.prompt("Admin password to delete this post:");
     if (!pwd) return;
     if (!window.confirm("Delete this post? This can't be undone.")) return;
 
@@ -95,7 +95,7 @@ export default function TransparencyPage() {
     });
 
     if (res.ok) {
-      setUnlockedPassword(pwd);
+      login(pwd);
       await loadArticles();
     } else {
       const json = await res.json().catch(() => ({}));
@@ -106,7 +106,21 @@ export default function TransparencyPage() {
   return (
     <main className="mx-auto flex min-h-screen max-w-xl flex-col px-4 pb-24">
       <header className="sticky top-0 z-10 -mx-4 border-b border-ink-700 bg-ink-950/85 px-4 pb-3 pt-5 backdrop-blur">
-        <Logo />
+        <div className="flex items-start justify-between gap-3">
+          <Logo />
+          {isAdmin && (
+            <button
+              onClick={() => {
+                if (window.confirm("Exit admin mode?")) logout();
+              }}
+              title="Admin mode, tap to exit"
+              className="mt-0.5 flex shrink-0 items-center gap-1.5 rounded-full border border-gold-600/50 bg-gold-liquid-soft/[0.12] px-2.5 py-1.5 text-[11px] font-medium text-gold-300"
+            >
+              <ShieldCheck size={13} strokeWidth={2.4} />
+              Admin
+            </button>
+          )}
+        </div>
         <p className="mt-1.5 text-xs tracking-wide text-ink-400">
           Transparency — council projects, updates, and how things are moving.
         </p>
@@ -114,13 +128,23 @@ export default function TransparencyPage() {
 
       <section className="mt-4">
         {!composerOpen ? (
-          <button
-            onClick={() => setComposerOpen(true)}
-            className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-ink-600 py-3 text-xs font-medium text-ink-400 hover:border-gold-600/50 hover:text-gold-300"
-          >
-            <Lock size={13} strokeWidth={2.2} />
-            Council admin? Post an update
-          </button>
+          isAdmin ? (
+            <button
+              onClick={() => setComposerOpen(true)}
+              className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-gold-600/50 py-3 text-xs font-medium text-gold-300 hover:border-gold-500"
+            >
+              <Plus size={13} strokeWidth={2.2} />
+              New update
+            </button>
+          ) : (
+            <button
+              onClick={() => setComposerOpen(true)}
+              className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-ink-600 py-3 text-xs font-medium text-ink-400 hover:border-gold-600/50 hover:text-gold-300"
+            >
+              <Lock size={13} strokeWidth={2.2} />
+              Council admin? Post an update
+            </button>
+          )
         ) : (
           <div className="rounded-xl border border-ink-600 bg-ink-800/60 p-3.5">
             <div className="mb-2 flex items-center justify-between">
@@ -141,13 +165,15 @@ export default function TransparencyPage() {
             </div>
 
             <div className="flex flex-col gap-2.5">
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Admin password"
-                className="rounded-lg border border-ink-600 bg-ink-900 px-3 py-2 text-sm text-[#f2ecdb] placeholder:text-ink-400 focus:border-gold-500 focus:outline-none"
-              />
+              {!isAdmin && (
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Admin password"
+                  className="rounded-lg border border-ink-600 bg-ink-900 px-3 py-2 text-sm text-[#f2ecdb] placeholder:text-ink-400 focus:border-gold-500 focus:outline-none"
+                />
+              )}
               <input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
