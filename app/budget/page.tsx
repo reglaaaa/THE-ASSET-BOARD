@@ -1031,7 +1031,7 @@ export default function BudgetPage() {
           )}
         </div>
         <p className="mt-1.5 text-xs tracking-wide text-ink-400">
-          Budget Dashboard — where the money comes from, where it goes.
+          Budget Dashboard
         </p>
       </header>
 
