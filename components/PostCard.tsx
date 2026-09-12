@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Flame, TriangleAlert } from "lucide-react";
-import { categoryMeta } from "@/lib/categories";
-import type { Post } from "@/lib/supabaseClient";
+import { Flame, Pencil, Trash2, TriangleAlert, X, Check } from "lucide-react";
+import { CATEGORIES, categoryMeta } from "@/lib/categories";
+import type { Post, Category } from "@/lib/supabaseClient";
 import { CommentSection } from "@/components/CommentSection";
 
 function timeAgo(iso: string) {
@@ -23,15 +23,90 @@ function timeAgo(iso: string) {
 export function PostCard({
   post,
   liked,
-  onToggleLike
+  onToggleLike,
+  isAdmin = false,
+  adminPassword = null,
+  onChanged
 }: {
   post: Post;
   liked: boolean;
   onToggleLike: (id: string) => void;
+  isAdmin?: boolean;
+  adminPassword?: string | null;
+  onChanged?: () => void;
 }) {
   const meta = categoryMeta(post.category);
   const Icon = meta.icon;
   const [pulse, setPulse] = useState(0);
+
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(post.content);
+  const [draftCategory, setDraftCategory] = useState<Category>(post.category);
+  const [draftUrgent, setDraftUrgent] = useState(post.is_urgent);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  function startEdit() {
+    setDraft(post.content);
+    setDraftCategory(post.category);
+    setDraftUrgent(post.is_urgent);
+    setError(null);
+    setEditing(true);
+  }
+
+  async function handleSave() {
+    if (!adminPassword || saving) return;
+    const trimmed = draft.trim();
+    if (!trimmed) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/posts", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          password: adminPassword,
+          id: post.id,
+          content: trimmed,
+          category: draftCategory,
+          is_urgent: draftUrgent
+        })
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(json.error ?? "Couldn't save that — please try again.");
+        return;
+      }
+      setEditing(false);
+      onChanged?.();
+    } catch {
+      setError("Network error — please try again.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!adminPassword) return;
+    if (!window.confirm("Delete this post? This can't be undone.")) return;
+    setDeleting(true);
+    try {
+      const res = await fetch("/api/posts", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: adminPassword, id: post.id })
+      });
+      if (res.ok) {
+        onChanged?.();
+      } else {
+        const json = await res.json().catch(() => ({}));
+        alert(json.error ?? "Couldn't delete that post.");
+      }
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   return (
     <article
@@ -54,12 +129,94 @@ export function PostCard({
             </span>
           )}
           <span>{timeAgo(post.created_at)}</span>
+          {isAdmin && !editing && (
+            <span className="flex items-center gap-1.5 border-l border-ink-700 pl-2">
+              <button
+                onClick={startEdit}
+                aria-label="Edit post"
+                title="Edit (admin only)"
+                className="text-ink-400 hover:text-gold-300"
+              >
+                <Pencil size={13} strokeWidth={2.2} />
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                aria-label="Delete post"
+                title="Delete (admin only)"
+                className="text-ink-400 hover:text-blood-400 disabled:opacity-40"
+              >
+                <Trash2 size={13} strokeWidth={2.2} />
+              </button>
+            </span>
+          )}
         </div>
       </div>
 
-      <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-[#f2ecdb]/90">
-        {post.content}
-      </p>
+      {editing ? (
+        <div className="flex flex-col gap-2.5">
+          <textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            rows={3}
+            maxLength={500}
+            className="w-full resize-none rounded-lg border border-ink-600 bg-ink-900 px-3 py-2 text-[15px] text-[#f2ecdb] focus:border-gold-500 focus:outline-none"
+          />
+          <div className="flex flex-wrap items-center gap-1.5">
+            {CATEGORIES.map(({ value, label, icon: CatIcon }) => (
+              <button
+                key={value}
+                onClick={() => setDraftCategory(value)}
+                aria-pressed={draftCategory === value}
+                className={`flex h-7 items-center gap-1.5 rounded-full px-2.5 text-xs font-medium transition-colors ${
+                  draftCategory === value
+                    ? "bg-gold-liquid-soft text-ink-950"
+                    : "text-ink-400 hover:bg-ink-700 hover:text-gold-300"
+                }`}
+              >
+                <CatIcon size={13} strokeWidth={2.2} />
+                {label}
+              </button>
+            ))}
+            <button
+              onClick={() => setDraftUrgent((v) => !v)}
+              aria-pressed={draftUrgent}
+              className={`flex h-7 items-center gap-1.5 rounded-full px-2.5 text-xs font-medium transition-colors ${
+                draftUrgent
+                  ? "bg-blood-500 text-ink-950"
+                  : "text-ink-400 hover:bg-blood-700/30 hover:text-blood-400"
+              }`}
+            >
+              <TriangleAlert size={13} strokeWidth={2.2} />
+              Urgent
+            </button>
+          </div>
+
+          {error && <p className="text-[11px] text-blood-400">{error}</p>}
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleSave}
+              disabled={!draft.trim() || saving}
+              className="flex h-8 items-center gap-1.5 rounded-full bg-gold-liquid-soft px-3 text-xs font-medium text-ink-950 disabled:opacity-40"
+            >
+              <Check size={13} strokeWidth={2.4} />
+              {saving ? "Saving…" : "Save"}
+            </button>
+            <button
+              onClick={() => setEditing(false)}
+              className="flex h-8 items-center gap-1.5 rounded-full border border-ink-600 px-3 text-xs font-medium text-ink-400 hover:text-blood-400"
+            >
+              <X size={13} strokeWidth={2.4} />
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-[#f2ecdb]/90">
+          {post.content}
+        </p>
+      )}
 
       <div className="mt-3 flex items-center gap-1">
         <button
@@ -85,7 +242,12 @@ export function PostCard({
           {post.likes_count}
         </button>
 
-        <CommentSection postId={post.id} commentsCount={post.comments_count} />
+        <CommentSection
+          postId={post.id}
+          commentsCount={post.comments_count}
+          isAdmin={isAdmin}
+          adminPassword={adminPassword}
+        />
       </div>
     </article>
   );
