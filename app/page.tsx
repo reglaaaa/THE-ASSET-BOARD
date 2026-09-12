@@ -1,14 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { Clock, PiggyBank, ShieldCheck, TrendingUp } from "lucide-react";
+import { Clock, Inbox, TrendingUp } from "lucide-react";
 import { supabase, type Post, type Category } from "@/lib/supabaseClient";
 import { getAnonId, getLikedSet, persistLiked } from "@/lib/anonId";
 import { Logo } from "@/components/Logo";
 import { Composer } from "@/components/Composer";
 import { CategoryFilter } from "@/components/CategoryFilter";
 import { PostCard } from "@/components/PostCard";
+import { FAB } from "@/components/FAB";
+import { BottomSheet } from "@/components/BottomSheet";
+import { EmptyState } from "@/components/EmptyState";
+import { FeedSkeleton } from "@/components/skeletons/PostCardSkeleton";
+import { PullToRefresh } from "@/components/PullToRefresh";
 
 type Sort = "new" | "top";
 
@@ -18,6 +22,7 @@ export default function Home() {
   const [filter, setFilter] = useState<Category | "all">("all");
   const [sort, setSort] = useState<Sort>("new");
   const [liked, setLiked] = useState<Set<string>>(new Set());
+  const [composerOpen, setComposerOpen] = useState(false);
 
   useEffect(() => {
     setLiked(getLikedSet());
@@ -57,6 +62,7 @@ export default function Home() {
       alert(error.message || "Couldn't post that — please try again.");
       return;
     }
+    setComposerOpen(false);
     await loadPosts();
   }
 
@@ -109,27 +115,9 @@ export default function Home() {
   }, [posts, filter, sort]);
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-xl flex-col px-4 pb-10">
+    <main className="mx-auto flex min-h-screen max-w-xl flex-col px-4 pb-28">
       <header className="sticky top-0 z-10 -mx-4 border-b border-ink-700 bg-ink-950/85 px-4 pb-3 pt-5 backdrop-blur">
-        <div className="flex items-center justify-between">
-          <Logo />
-          <div className="flex shrink-0 items-center gap-2">
-            <Link
-              href="/budget"
-              className="inline-flex items-center gap-1.5 rounded-full border border-ink-600 px-3 py-1.5 text-xs text-ink-400 hover:text-gold-300"
-            >
-              <PiggyBank size={13} strokeWidth={2.2} />
-              Budget
-            </Link>
-            <Link
-              href="/transparency"
-              className="inline-flex items-center gap-1.5 rounded-full border border-ink-600 px-3 py-1.5 text-xs text-ink-400 hover:text-gold-300"
-            >
-              <ShieldCheck size={13} strokeWidth={2.2} />
-              Transparency
-            </Link>
-          </div>
-        </div>
+        <Logo />
         <p className="mt-1.5 text-xs tracking-wide text-ink-400">
           Engineered to Serve. United to Lead.
         </p>
@@ -141,7 +129,7 @@ export default function Home() {
               title="Newest"
               aria-pressed={sort === "new"}
               onClick={() => setSort("new")}
-              className={`flex h-7 w-7 items-center justify-center rounded-full ${
+              className={`flex h-7 w-7 items-center justify-center rounded-full transition-colors ${
                 sort === "new" ? "bg-gold-liquid-soft text-ink-950" : "text-ink-400"
               }`}
             >
@@ -151,7 +139,7 @@ export default function Home() {
               title="Top"
               aria-pressed={sort === "top"}
               onClick={() => setSort("top")}
-              className={`flex h-7 w-7 items-center justify-center rounded-full ${
+              className={`flex h-7 w-7 items-center justify-center rounded-full transition-colors ${
                 sort === "top" ? "bg-gold-liquid-soft text-ink-950" : "text-ink-400"
               }`}
             >
@@ -161,30 +149,34 @@ export default function Home() {
         </div>
       </header>
 
-      <section className="mt-4">
+      <PullToRefresh onRefresh={loadPosts}>
+        <section className="mt-4 flex flex-col gap-2.5">
+          {loading && <FeedSkeleton />}
+
+          {!loading && visiblePosts.length === 0 && (
+            <EmptyState
+              icon={<Inbox size={20} strokeWidth={2} />}
+              message="Nothing here yet — be the first to raise it."
+            />
+          )}
+
+          {!loading && visiblePosts.length > 0 && (
+            <div key={`${filter}-${sort}`} className="flex flex-col gap-2.5">
+              {visiblePosts.map((post) => (
+                <div key={post.id} className="animate-fade-slide-in">
+                  <PostCard post={post} liked={liked.has(post.id)} onToggleLike={toggleLike} />
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      </PullToRefresh>
+
+      <FAB onClick={() => setComposerOpen(true)} label="New post" />
+
+      <BottomSheet open={composerOpen} onClose={() => setComposerOpen(false)} title="New post">
         <Composer onSubmit={handleCreate} />
-      </section>
-
-      <section className="mt-4 flex flex-col gap-2.5">
-        {loading && (
-          <p className="py-10 text-center text-sm text-ink-400">Loading the feed…</p>
-        )}
-
-        {!loading && visiblePosts.length === 0 && (
-          <p className="py-10 text-center text-sm text-ink-400">
-            Nothing here yet. Be the first to raise it.
-          </p>
-        )}
-
-        {visiblePosts.map((post) => (
-          <PostCard
-            key={post.id}
-            post={post}
-            liked={liked.has(post.id)}
-            onToggleLike={toggleLike}
-          />
-        ))}
-      </section>
+      </BottomSheet>
     </main>
   );
 }
