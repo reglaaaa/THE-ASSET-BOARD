@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Mail, ShieldCheck } from "lucide-react";
+import { Mail, PiggyBank, ShieldCheck } from "lucide-react";
 import { Logo } from "./Logo";
 
 export function Footer() {
@@ -22,6 +22,13 @@ export function Footer() {
             Home
           </Link>
           <Link
+            href="/budget"
+            className="inline-flex items-center gap-1.5 hover:text-gold-300"
+          >
+            <PiggyBank size={13} strokeWidth={2.2} />
+            Budget
+          </Link>
+          <Link
             href="/transparency"
             className="inline-flex items-center gap-1.5 hover:text-gold-300"
           >
@@ -33,13 +40,14 @@ export function Footer() {
             className="inline-flex items-center gap-1.5 hover:text-gold-300"
           >
             <Mail size={13} strokeWidth={2.2} />
-            26-32070@g.batstate-u.edu.ph
+            26-32070@g.batstate-u.edu.ph (Executive PRO II)
           </a>
         </div>
 
         <p className="text-[11px] text-ink-400/70">
           © {year} BatStateU LIMA Campus — Supreme Student Council. For
-          technical issues or site maintenance, contact the address above.
+          technical issues or site maintenance, contact the Executive PRO
+          II at the address above.
         </p>
       </div>
     </footer>
