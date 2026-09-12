@@ -1,9 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import {
-  ArrowLeft,
   ChevronDown,
   Coins,
   FolderKanban,
@@ -23,6 +21,8 @@ import {
   type ProjectStatus
 } from "@/lib/supabaseClient";
 import { Logo } from "@/components/Logo";
+import { EmptyState } from "@/components/EmptyState";
+import { BudgetSkeleton } from "@/components/skeletons/BudgetSkeleton";
 
 const PESO = new Intl.NumberFormat("en-PH", {
   style: "currency",
@@ -323,7 +323,13 @@ function SourcesSection({
   }
 
   if (sources.length === 0 && !adminMode) {
-    return <p className="py-4 text-center text-xs text-ink-400">No budget sources recorded yet.</p>;
+    return (
+      <EmptyState
+        icon={<Coins size={18} strokeWidth={2} />}
+        message="No budget sources recorded yet."
+        className="py-4"
+      />
+    );
   }
 
   return (
@@ -541,7 +547,13 @@ function ExpensesSection({
   }
 
   if (expenses.length === 0 && !adminMode) {
-    return <p className="py-4 text-center text-xs text-ink-400">No expenses recorded yet.</p>;
+    return (
+      <EmptyState
+        icon={<TrendingDown size={18} strokeWidth={2} />}
+        message="No expenses recorded yet."
+        className="py-4"
+      />
+    );
   }
 
   return (
@@ -806,7 +818,11 @@ function ProjectsSection({
 
       {/* Full project list */}
       {projects.length === 0 && !adminMode && (
-        <p className="py-4 text-center text-xs text-ink-400">No projects recorded yet.</p>
+        <EmptyState
+          icon={<FolderKanban size={18} strokeWidth={2} />}
+          message="No projects recorded yet."
+          className="py-4"
+        />
       )}
 
       <div className="flex flex-col gap-2">
@@ -1013,25 +1029,18 @@ export default function BudgetPage() {
   const deficit = totalSpending - totalBudget;
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-xl flex-col px-4 pb-10">
+    <main className="mx-auto flex min-h-screen max-w-xl flex-col px-4 pb-24">
       <header className="sticky top-0 z-10 -mx-4 border-b border-ink-700 bg-ink-950/85 px-4 pb-3 pt-5 backdrop-blur">
-        <div className="flex items-center justify-between">
-          <Logo />
-          <Link
-            href="/"
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-ink-600 px-3 py-1.5 text-xs text-ink-400 hover:text-gold-300"
-          >
-            <ArrowLeft size={13} strokeWidth={2.2} />
-            Feed
-          </Link>
-        </div>
+        <Logo />
         <p className="mt-1.5 text-xs tracking-wide text-ink-400">
           Budget Dashboard — where the money comes from, where it goes.
         </p>
       </header>
 
       {loading ? (
-        <p className="py-10 text-center text-sm text-ink-400">Loading figures…</p>
+        <div className="mt-4">
+          <BudgetSkeleton />
+        </div>
       ) : (
         <section className="mt-4 flex flex-col gap-3">
           <AdminUnlockBar
