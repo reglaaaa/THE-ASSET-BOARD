@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Clock, Inbox, Lock, ShieldCheck, TrendingUp } from "lucide-react";
 import { supabase, type Post, type Category } from "@/lib/supabaseClient";
 import { getAnonId, getLikedSet, persistLiked } from "@/lib/anonId";
+import { useAdmin } from "@/lib/useAdmin";
 import { Logo } from "@/components/Logo";
 import { Composer } from "@/components/Composer";
 import { CategoryFilter } from "@/components/CategoryFilter";
@@ -24,11 +25,7 @@ export default function Home() {
   const [liked, setLiked] = useState<Set<string>>(new Set());
   const [composerOpen, setComposerOpen] = useState(false);
 
-  // Admin mode — unlocked with the council password. Kept only in memory
-  // for this tab, same as the Transparency and Budget pages, and used to
-  // authorize edits/deletes and official SSC replies via the /api routes.
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [adminPassword, setAdminPassword] = useState<string | null>(null);
+  const { isAdmin, password: adminPassword, login, logout } = useAdmin();
   const [adminSheetOpen, setAdminSheetOpen] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
   const [adminSubmitting, setAdminSubmitting] = useState(false);
@@ -131,12 +128,11 @@ export default function Home() {
         setAdminError(json.error ?? "Incorrect admin password.");
         return;
       }
-      setIsAdmin(true);
-      setAdminPassword(passwordInput);
+      login(passwordInput);
       setPasswordInput("");
       setAdminSheetOpen(false);
     } catch {
-      setAdminError("Network error — please try again.");
+      setAdminError("Network error, please try again.");
     } finally {
       setAdminSubmitting(false);
     }
@@ -144,8 +140,7 @@ export default function Home() {
 
   function handleAdminExit() {
     if (!window.confirm("Exit admin mode?")) return;
-    setIsAdmin(false);
-    setAdminPassword(null);
+    logout();
   }
 
   const visiblePosts = useMemo(() => {
@@ -164,7 +159,7 @@ export default function Home() {
           {isAdmin ? (
             <button
               onClick={handleAdminExit}
-              title="Admin mode — tap to exit"
+              title="Admin mode, tap to exit"
               className="mt-0.5 flex shrink-0 items-center gap-1.5 rounded-full border border-gold-600/50 bg-gold-liquid-soft/[0.12] px-2.5 py-1.5 text-[11px] font-medium text-gold-300"
             >
               <ShieldCheck size={13} strokeWidth={2.4} />
@@ -258,10 +253,6 @@ export default function Home() {
         title="Council admin"
       >
         <div className="flex flex-col gap-2.5">
-          <p className="text-xs leading-relaxed text-ink-400">
-            Unlock admin mode to edit or remove any post or comment, and to reply as the SSC
-            with the official badge.
-          </p>
           <input
             type="password"
             value={passwordInput}
