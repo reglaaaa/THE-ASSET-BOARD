@@ -143,7 +143,7 @@ export async function POST(req: NextRequest) {
 
   const { data, error } = await supabaseAdmin()
     .from(table)
-    .insert(sanitized.value)
+    .insert(sanitized.value as never)
     .select()
     .single();
 
@@ -185,7 +185,7 @@ export async function PUT(req: NextRequest) {
 
   const { data, error } = await supabaseAdmin()
     .from(table)
-    .update(sanitized.value)
+    .update(sanitized.value as never)
     .eq("id", id)
     .select()
     .single();
