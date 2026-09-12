@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
-import { ArrowLeft, Lock, PiggyBank, Plus, Trash2, X } from "lucide-react";
+import { Lock, Plus, ShieldCheck, Trash2, X } from "lucide-react";
 import { supabase, type Article } from "@/lib/supabaseClient";
 import { Logo } from "@/components/Logo";
+import { EmptyState } from "@/components/EmptyState";
 
 export default function TransparencyPage() {
   const [articles, setArticles] = useState<Article[]>([]);
@@ -104,27 +104,9 @@ export default function TransparencyPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-xl flex-col px-4 pb-10">
+    <main className="mx-auto flex min-h-screen max-w-xl flex-col px-4 pb-24">
       <header className="sticky top-0 z-10 -mx-4 border-b border-ink-700 bg-ink-950/85 px-4 pb-3 pt-5 backdrop-blur">
-        <div className="flex items-center justify-between">
-          <Logo />
-          <div className="flex shrink-0 items-center gap-2">
-            <Link
-              href="/budget"
-              className="inline-flex items-center gap-1.5 rounded-full border border-ink-600 px-3 py-1.5 text-xs text-ink-400 hover:text-gold-300"
-            >
-              <PiggyBank size={13} strokeWidth={2.2} />
-              Budget
-            </Link>
-            <Link
-              href="/"
-              className="inline-flex items-center gap-1.5 rounded-full border border-ink-600 px-3 py-1.5 text-xs text-ink-400 hover:text-gold-300"
-            >
-              <ArrowLeft size={13} strokeWidth={2.2} />
-              Feed
-            </Link>
-          </div>
-        </div>
+        <Logo />
         <p className="mt-1.5 text-xs tracking-wide text-ink-400">
           Transparency — council projects, updates, and how things are moving.
         </p>
@@ -204,20 +186,33 @@ export default function TransparencyPage() {
       </section>
 
       <section className="mt-5 flex flex-col gap-4">
-        {loading && (
-          <p className="py-10 text-center text-sm text-ink-400">Loading updates…</p>
-        )}
+        {loading &&
+          Array.from({ length: 3 }).map((_, i) => (
+            <div
+              key={i}
+              className="animate-pulse overflow-hidden rounded-xl border border-ink-600 bg-ink-800/60"
+            >
+              <div className="h-44 w-full bg-ink-700" />
+              <div className="space-y-2 p-4">
+                <div className="h-4 w-3/4 rounded bg-ink-700" />
+                <div className="h-3 w-1/4 rounded bg-ink-700" />
+                <div className="h-3 w-full rounded bg-ink-700" />
+                <div className="h-3 w-5/6 rounded bg-ink-700" />
+              </div>
+            </div>
+          ))}
 
         {!loading && articles.length === 0 && (
-          <p className="py-10 text-center text-sm text-ink-400">
-            No transparency posts yet. Check back soon.
-          </p>
+          <EmptyState
+            icon={<ShieldCheck size={20} strokeWidth={2} />}
+            message="No transparency posts yet — check back soon."
+          />
         )}
 
         {articles.map((a) => (
           <article
             key={a.id}
-            className="overflow-hidden rounded-xl border border-ink-600 bg-ink-800/60"
+            className="animate-fade-slide-in overflow-hidden rounded-xl border border-ink-600 bg-ink-800/60"
           >
             {a.image_url ? (
               // eslint-disable-next-line @next/next/no-img-element
