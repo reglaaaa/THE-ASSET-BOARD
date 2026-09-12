@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Flame, TriangleAlert } from "lucide-react";
 import { categoryMeta } from "@/lib/categories";
 import type { Post } from "@/lib/supabaseClient";
@@ -9,10 +10,14 @@ function timeAgo(iso: string) {
   const diff = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m`;
+  if (mins < 60) return `${mins}m ago`;
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h`;
-  return `${Math.floor(hrs / 24)}d`;
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return `${days}d ago`;
+  const weeks = Math.floor(days / 7);
+  if (weeks < 5) return `${weeks}w ago`;
+  return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
 export function PostCard({
@@ -26,6 +31,7 @@ export function PostCard({
 }) {
   const meta = categoryMeta(post.category);
   const Icon = meta.icon;
+  const [pulse, setPulse] = useState(0);
 
   return (
     <article
@@ -57,7 +63,10 @@ export function PostCard({
 
       <div className="mt-3 flex items-center gap-1">
         <button
-          onClick={() => onToggleLike(post.id)}
+          onClick={() => {
+            onToggleLike(post.id);
+            setPulse((p) => p + 1);
+          }}
           aria-pressed={liked}
           aria-label={liked ? "Remove support" : "Support this"}
           className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm transition-all ${
@@ -66,7 +75,13 @@ export function PostCard({
               : "text-ink-400 hover:text-gold-300 hover:bg-ink-700/60"
           }`}
         >
-          <Flame size={16} strokeWidth={2.2} fill={liked ? "#08070a" : "none"} />
+          <Flame
+            key={pulse}
+            size={16}
+            strokeWidth={2.2}
+            fill={liked ? "#08070a" : "none"}
+            className="animate-pop"
+          />
           {post.likes_count}
         </button>
 

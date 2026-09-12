@@ -1,5 +1,4 @@
-import Link from "next/link";
-import { Mail, PiggyBank, ShieldCheck } from "lucide-react";
+import { Mail } from "lucide-react";
 import { Logo } from "./Logo";
 
 export function Footer() {
@@ -18,23 +17,6 @@ export function Footer() {
         </p>
 
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-ink-400">
-          <Link href="/" className="hover:text-gold-300">
-            Home
-          </Link>
-          <Link
-            href="/budget"
-            className="inline-flex items-center gap-1.5 hover:text-gold-300"
-          >
-            <PiggyBank size={13} strokeWidth={2.2} />
-            Budget
-          </Link>
-          <Link
-            href="/transparency"
-            className="inline-flex items-center gap-1.5 hover:text-gold-300"
-          >
-            <ShieldCheck size={13} strokeWidth={2.2} />
-            Transparency
-          </Link>
           <a
             href="mailto:26-32070@g.batstate-u.edu.ph"
             className="inline-flex items-center gap-1.5 hover:text-gold-300"
