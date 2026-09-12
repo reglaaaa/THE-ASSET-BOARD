@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Clock, Inbox, TrendingUp } from "lucide-react";
+import { Clock, Inbox, Lock, ShieldCheck, TrendingUp } from "lucide-react";
 import { supabase, type Post, type Category } from "@/lib/supabaseClient";
 import { getAnonId, getLikedSet, persistLiked } from "@/lib/anonId";
 import { Logo } from "@/components/Logo";
@@ -23,6 +23,16 @@ export default function Home() {
   const [sort, setSort] = useState<Sort>("new");
   const [liked, setLiked] = useState<Set<string>>(new Set());
   const [composerOpen, setComposerOpen] = useState(false);
+
+  // Admin mode — unlocked with the council password. Kept only in memory
+  // for this tab, same as the Transparency and Budget pages, and used to
+  // authorize edits/deletes and official SSC replies via the /api routes.
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminPassword, setAdminPassword] = useState<string | null>(null);
+  const [adminSheetOpen, setAdminSheetOpen] = useState(false);
+  const [passwordInput, setPasswordInput] = useState("");
+  const [adminSubmitting, setAdminSubmitting] = useState(false);
+  const [adminError, setAdminError] = useState<string | null>(null);
 
   useEffect(() => {
     setLiked(getLikedSet());
@@ -106,6 +116,38 @@ export default function Home() {
     await loadPosts();
   }
 
+  async function handleAdminUnlock() {
+    if (!passwordInput || adminSubmitting) return;
+    setAdminSubmitting(true);
+    setAdminError(null);
+    try {
+      const res = await fetch("/api/admin/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: passwordInput })
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setAdminError(json.error ?? "Incorrect admin password.");
+        return;
+      }
+      setIsAdmin(true);
+      setAdminPassword(passwordInput);
+      setPasswordInput("");
+      setAdminSheetOpen(false);
+    } catch {
+      setAdminError("Network error — please try again.");
+    } finally {
+      setAdminSubmitting(false);
+    }
+  }
+
+  function handleAdminExit() {
+    if (!window.confirm("Exit admin mode?")) return;
+    setIsAdmin(false);
+    setAdminPassword(null);
+  }
+
   const visiblePosts = useMemo(() => {
     let list = filter === "all" ? posts : posts.filter((p) => p.category === filter);
     if (sort === "top") {
@@ -117,7 +159,28 @@ export default function Home() {
   return (
     <main className="mx-auto flex min-h-screen max-w-xl flex-col px-4 pb-28">
       <header className="sticky top-0 z-10 -mx-4 border-b border-ink-700 bg-ink-950/85 px-4 pb-3 pt-5 backdrop-blur">
-        <Logo />
+        <div className="flex items-start justify-between gap-3">
+          <Logo />
+          {isAdmin ? (
+            <button
+              onClick={handleAdminExit}
+              title="Admin mode — tap to exit"
+              className="mt-0.5 flex shrink-0 items-center gap-1.5 rounded-full border border-gold-600/50 bg-gold-liquid-soft/[0.12] px-2.5 py-1.5 text-[11px] font-medium text-gold-300"
+            >
+              <ShieldCheck size={13} strokeWidth={2.4} />
+              Admin
+            </button>
+          ) : (
+            <button
+              onClick={() => setAdminSheetOpen(true)}
+              title="Become admin"
+              aria-label="Become admin"
+              className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-ink-600 text-ink-400 hover:border-gold-600/50 hover:text-gold-300"
+            >
+              <Lock size={14} strokeWidth={2.2} />
+            </button>
+          )}
+        </div>
         <p className="mt-1.5 text-xs tracking-wide text-ink-400">
           Engineered to Serve. United to Lead.
         </p>
@@ -164,7 +227,14 @@ export default function Home() {
             <div key={`${filter}-${sort}`} className="flex flex-col gap-2.5">
               {visiblePosts.map((post) => (
                 <div key={post.id} className="animate-fade-slide-in">
-                  <PostCard post={post} liked={liked.has(post.id)} onToggleLike={toggleLike} />
+                  <PostCard
+                    post={post}
+                    liked={liked.has(post.id)}
+                    onToggleLike={toggleLike}
+                    isAdmin={isAdmin}
+                    adminPassword={adminPassword}
+                    onChanged={loadPosts}
+                  />
                 </div>
               ))}
             </div>
@@ -176,6 +246,42 @@ export default function Home() {
 
       <BottomSheet open={composerOpen} onClose={() => setComposerOpen(false)} title="New post">
         <Composer onSubmit={handleCreate} />
+      </BottomSheet>
+
+      <BottomSheet
+        open={adminSheetOpen}
+        onClose={() => {
+          setAdminSheetOpen(false);
+          setPasswordInput("");
+          setAdminError(null);
+        }}
+        title="Council admin"
+      >
+        <div className="flex flex-col gap-2.5">
+          <p className="text-xs leading-relaxed text-ink-400">
+            Unlock admin mode to edit or remove any post or comment, and to reply as the SSC
+            with the official badge.
+          </p>
+          <input
+            type="password"
+            value={passwordInput}
+            onChange={(e) => setPasswordInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleAdminUnlock();
+            }}
+            placeholder="Admin password"
+            className="rounded-lg border border-ink-600 bg-ink-900 px-3 py-2 text-sm text-[#f2ecdb] placeholder:text-ink-400 focus:border-gold-500 focus:outline-none"
+          />
+          {adminError && <p className="text-xs text-blood-400">{adminError}</p>}
+          <button
+            onClick={handleAdminUnlock}
+            disabled={!passwordInput || adminSubmitting}
+            className="flex h-9 items-center justify-center gap-1.5 rounded-full bg-gold-liquid-soft text-sm font-medium text-ink-950 transition-opacity disabled:opacity-40"
+          >
+            <ShieldCheck size={14} strokeWidth={2.4} />
+            {adminSubmitting ? "Checking…" : "Unlock admin mode"}
+          </button>
+        </div>
       </BottomSheet>
     </main>
   );
