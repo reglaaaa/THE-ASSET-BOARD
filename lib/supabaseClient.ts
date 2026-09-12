@@ -29,6 +29,7 @@ export type Comment = {
   post_id: string;
   content: string;
   created_at: string;
+  is_official: boolean;
 };
 
 export type Article = {
