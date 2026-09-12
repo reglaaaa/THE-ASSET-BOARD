@@ -38,3 +38,30 @@ export type Article = {
   image_url: string | null;
   created_at: string;
 };
+
+export type BudgetSource = {
+  id: string;
+  source: string;
+  amount: number;
+  date_received: string;
+  created_at: string;
+};
+
+export type Expense = {
+  id: string;
+  item: string;
+  amount: number;
+  date_spent: string;
+  created_at: string;
+};
+
+export type ProjectStatus = "planning" | "executing" | "cancelled" | "executed";
+
+export type Project = {
+  id: string;
+  name: string;
+  description: string;
+  status: ProjectStatus;
+  budget_used: number;
+  created_at: string;
+};
