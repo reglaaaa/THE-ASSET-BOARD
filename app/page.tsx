@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Clock, Inbox, Lock, ShieldCheck, TrendingUp } from "lucide-react";
-import { supabase, type Post, type Category } from "@/lib/supabaseClient";
+import Link from "next/link";
+import { ChevronRight, Clock, Inbox, Lock, ShieldCheck, TrendingUp } from "lucide-react";
+import { supabase, type Post, type Category, type Article } from "@/lib/supabaseClient";
 import { getAnonId, getLikedSet, persistLiked } from "@/lib/anonId";
 import { useAdmin } from "@/lib/useAdmin";
 import { Logo } from "@/components/Logo";
@@ -20,6 +21,7 @@ type Sort = "new" | "top";
 export default function Home() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [latestArticle, setLatestArticle] = useState<Article | null>(null);
   const [filter, setFilter] = useState<Category | "all">("all");
   const [sort, setSort] = useState<Sort>("new");
   const [liked, setLiked] = useState<Set<string>>(new Set());
@@ -34,6 +36,7 @@ export default function Home() {
   useEffect(() => {
     setLiked(getLikedSet());
     loadPosts();
+    loadLatestArticle();
 
     // Live updates: new posts and like-count changes appear without a refresh
     const channel = supabase
@@ -48,6 +51,15 @@ export default function Home() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  async function loadLatestArticle() {
+    const { data, error } = await supabase
+      .from("articles")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(1);
+    if (!error && data && data.length > 0) setLatestArticle(data[0] as Article);
+  }
 
   async function loadPosts() {
     const { data, error } = await supabase
@@ -206,6 +218,29 @@ export default function Home() {
           </div>
         </div>
       </header>
+
+      {latestArticle && (
+        <Link
+          href="/transparency"
+          className="mt-4 block rounded-xl border border-ink-600 bg-ink-800/60 p-3.5 transition-colors hover:border-gold-600/50"
+        >
+          <div className="mb-1.5 flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wide text-gold-300">
+            <ShieldCheck size={11} strokeWidth={2.4} />
+            From the Archives
+          </div>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="font-display text-sm font-bold leading-snug text-[#f2ecdb]">
+                {latestArticle.title}
+              </h2>
+              <p className="mt-1 line-clamp-2 text-[13px] leading-relaxed text-ink-400">
+                {latestArticle.body.split(/\n\s*\n/)[0]}
+              </p>
+            </div>
+            <ChevronRight size={16} strokeWidth={2.2} className="mt-0.5 shrink-0 text-ink-400" />
+          </div>
+        </Link>
+      )}
 
       <PullToRefresh onRefresh={loadPosts}>
         <section className="mt-4 flex flex-col gap-2.5">
