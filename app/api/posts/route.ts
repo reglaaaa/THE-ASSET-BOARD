@@ -26,7 +26,9 @@ async function withinRateLimit(ip: string) {
   }
 }
 
-// Admin edit of a post: content, category, and/or urgent flag.
+const STATUS_VALUES = ["investigating", "executing", "resolved", "denied"];
+
+// Admin edit of a post: content, category, urgent flag, and/or status flag.
 export async function PATCH(req: NextRequest) {
   const ip = getClientIp(req);
   if (!(await withinRateLimit(ip))) {
@@ -37,7 +39,7 @@ export async function PATCH(req: NextRequest) {
   if (!body) {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
-  const { password, id, content, category, is_urgent } = body;
+  const { password, id, content, category, is_urgent, status } = body;
 
   if (!checkPassword(password)) {
     return NextResponse.json({ error: "Incorrect admin password." }, { status: 401 });
@@ -63,6 +65,12 @@ export async function PATCH(req: NextRequest) {
   }
   if (is_urgent !== undefined) {
     update.is_urgent = Boolean(is_urgent);
+  }
+  if (status !== undefined) {
+    if (status !== null && !STATUS_VALUES.includes(status)) {
+      return NextResponse.json({ error: "Invalid status." }, { status: 400 });
+    }
+    update.status = status;
   }
   if (Object.keys(update).length === 0) {
     return NextResponse.json({ error: "Nothing to update." }, { status: 400 });
