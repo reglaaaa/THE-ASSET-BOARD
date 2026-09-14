@@ -260,7 +260,7 @@ export default function Home() {
           )}
 
           {!loading && visiblePosts.length > 0 && (
-            <div key={`${filter}-${sort}`} className="flex flex-col gap-2.5">
+            <div key={`${filter}-${sort}`} className="flex flex-col">
               {visiblePosts.map((post) => (
                 <div key={post.id} className="animate-fade-slide-in">
                   <PostCard
