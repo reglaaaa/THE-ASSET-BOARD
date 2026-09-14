@@ -109,13 +109,7 @@ export function PostCard({
   }
 
   return (
-    <article
-      className={`rounded-xl border p-4 transition-colors ${
-        post.is_urgent
-          ? "border-blood-600/60 bg-blood-700/[0.08] shadow-blood"
-          : "border-ink-600 bg-ink-800/60 hover:border-gold-600/40"
-      }`}
-    >
+    <article className="border-b border-ink-700 py-4 transition-colors first:pt-0 last:border-b-0">
       <div className="mb-2.5 flex items-center justify-between text-xs text-ink-400">
         <span className="inline-flex items-center gap-1.5 rounded-full border border-ink-600 px-2.5 py-1 text-gold-300">
           <Icon size={13} strokeWidth={2} />
