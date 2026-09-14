@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { Flame, Pencil, Trash2, TriangleAlert, X, Check } from "lucide-react";
 import { CATEGORIES, categoryMeta } from "@/lib/categories";
-import type { Post, Category } from "@/lib/supabaseClient";
+import { STATUSES, statusMeta } from "@/lib/statuses";
+import type { Post, Category, PostStatus } from "@/lib/supabaseClient";
 import { CommentSection } from "@/components/CommentSection";
 
 function timeAgo(iso: string) {
@@ -37,6 +38,7 @@ export function PostCard({
 }) {
   const meta = categoryMeta(post.category);
   const Icon = meta.icon;
+  const currentStatus = statusMeta(post.status);
   const [pulse, setPulse] = useState(0);
 
   const [editing, setEditing] = useState(false);
@@ -45,6 +47,7 @@ export function PostCard({
   const [draftUrgent, setDraftUrgent] = useState(post.is_urgent);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [settingStatus, setSettingStatus] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   function startEdit() {
@@ -108,6 +111,28 @@ export function PostCard({
     }
   }
 
+  async function handleSetStatus(newStatus: PostStatus | null) {
+    if (!adminPassword || settingStatus) return;
+    setSettingStatus(true);
+    try {
+      const res = await fetch("/api/posts", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: adminPassword, id: post.id, status: newStatus })
+      });
+      if (res.ok) {
+        onChanged?.();
+      } else {
+        const json = await res.json().catch(() => ({}));
+        alert(json.error ?? "Couldn't update status.");
+      }
+    } catch {
+      alert("Network error, please try again.");
+    } finally {
+      setSettingStatus(false);
+    }
+  }
+
   return (
     <article className="py-4 transition-colors">
       <div className="mb-2.5 flex items-center justify-between text-xs text-ink-400">
@@ -146,6 +171,42 @@ export function PostCard({
           )}
         </div>
       </div>
+
+      {isAdmin && !editing ? (
+        <div className="mb-2.5 flex flex-wrap items-center gap-1.5">
+          {STATUSES.map(({ value, label, icon: StatusIcon, textClass, bgClass }) => {
+            const active = post.status === value;
+            return (
+              <button
+                key={value}
+                onClick={() => handleSetStatus(active ? null : value)}
+                disabled={settingStatus}
+                aria-pressed={active}
+                title={active ? `Clear "${label}" flag` : `Flag as ${label}`}
+                className={`flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-[11px] font-medium transition-colors disabled:opacity-40 ${
+                  active
+                    ? `${bgClass} ${textClass}`
+                    : "border-ink-600 text-ink-400 hover:border-gold-600/50 hover:text-gold-300"
+                }`}
+              >
+                <StatusIcon size={12} strokeWidth={2.4} />
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+        currentStatus && (
+          <div className="mb-2.5">
+            <span
+              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium ${currentStatus.bgClass} ${currentStatus.textClass}`}
+            >
+              <currentStatus.icon size={12} strokeWidth={2.4} />
+              {currentStatus.label}
+            </span>
+          </div>
+        )
+      )}
 
       {editing ? (
         <div className="flex flex-col gap-2.5">
