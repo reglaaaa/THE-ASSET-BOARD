@@ -109,7 +109,7 @@ export function PostCard({
   }
 
   return (
-    <article className="border-b border-ink-400/30 py-4 transition-colors first:pt-0 last:border-b-0">
+    <article className="border-b border-ink-400 py-4 transition-colors first:pt-0 last:border-b-0">
       <div className="mb-2.5 flex items-center justify-between text-xs text-ink-400">
         <span className="inline-flex items-center gap-1.5 rounded-full border border-ink-600 px-2.5 py-1 text-gold-300">
           <Icon size={13} strokeWidth={2} />
