@@ -7,7 +7,7 @@ import { Rss, PiggyBank, ShieldCheck, Users } from "lucide-react";
 const TABS = [
   { href: "/", label: "Feed", icon: Rss },
   { href: "/budget", label: "Budget", icon: PiggyBank },
-  { href: "/transparency", label: "Transparency", icon: ShieldCheck },
+  { href: "/transparency", label: "Archives", icon: ShieldCheck },
   { href: "/members", label: "Members", icon: Users }
 ] as const;
 
