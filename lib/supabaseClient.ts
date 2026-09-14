@@ -14,11 +14,14 @@ export const supabase = createClient(url, anonKey);
 
 export type Category = "concern" | "suggestion";
 
+export type PostStatus = "investigating" | "executing" | "resolved" | "denied";
+
 export type Post = {
   id: string;
   content: string;
   category: Category;
   is_urgent: boolean;
+  status: PostStatus | null;
   likes_count: number;
   comments_count: number;
   created_at: string;
