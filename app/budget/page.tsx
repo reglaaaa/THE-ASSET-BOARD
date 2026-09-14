@@ -203,7 +203,7 @@ function AdminUnlockBar({
           type="password"
           value={passwordInput}
           onChange={(e) => setPasswordInput(e.target.value)}
-          placeholder="Admin password (same as Transparency)"
+          placeholder="Admin password (same as Archives)"
           className={`flex-1 ${inputClass}`}
           onKeyDown={(e) => {
             if (e.key === "Enter" && passwordInput) onUnlock(passwordInput);
@@ -1031,7 +1031,7 @@ export default function BudgetPage() {
           )}
         </div>
         <p className="mt-1.5 text-xs tracking-wide text-ink-400">
-          Budget Dashboard
+          Budget Dashboard — where the money comes from, where it goes.
         </p>
       </header>
 
