@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Rss, PiggyBank, ShieldCheck } from "lucide-react";
+import { Rss, PiggyBank, ShieldCheck, Users } from "lucide-react";
 
 const TABS = [
   { href: "/", label: "Feed", icon: Rss },
   { href: "/budget", label: "Budget", icon: PiggyBank },
-  { href: "/transparency", label: "Transparency", icon: ShieldCheck }
+  { href: "/transparency", label: "Transparency", icon: ShieldCheck },
+  { href: "/members", label: "Members", icon: Users }
 ] as const;
 
 export function TabBar() {
