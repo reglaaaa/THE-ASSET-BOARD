@@ -222,22 +222,28 @@ export default function Home() {
       {latestArticle && (
         <Link
           href="/transparency"
-          className="mt-4 block rounded-xl border border-ink-600 bg-ink-800/60 p-3.5 transition-colors hover:border-gold-600/50"
+          className="group mt-4 block rounded-xl bg-gold-liquid-soft p-[1.5px] shadow-gold transition-transform active:scale-[0.99]"
         >
-          <div className="mb-1.5 flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wide text-gold-300">
-            <ShieldCheck size={11} strokeWidth={2.4} />
-            From the Archives
-          </div>
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <h2 className="font-display text-sm font-bold leading-snug text-[#f2ecdb]">
-                {latestArticle.title}
-              </h2>
-              <p className="mt-1 line-clamp-2 text-[13px] leading-relaxed text-ink-400">
-                {latestArticle.body.split(/\n\s*\n/)[0]}
-              </p>
+          <div className="rounded-[10px] bg-ink-900 p-3.5 transition-colors group-hover:bg-ink-900/90">
+            <div className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-gold-300">
+              <ShieldCheck size={11} strokeWidth={2.4} />
+              From the Archives
             </div>
-            <ChevronRight size={16} strokeWidth={2.2} className="mt-0.5 shrink-0 text-ink-400" />
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="font-display text-sm font-bold leading-snug text-[#f2ecdb]">
+                  {latestArticle.title}
+                </h2>
+                <p className="mt-1 line-clamp-2 text-[13px] leading-relaxed text-ink-400">
+                  {latestArticle.body.split(/\n\s*\n/)[0]}
+                </p>
+              </div>
+              <ChevronRight
+                size={16}
+                strokeWidth={2.4}
+                className="mt-0.5 shrink-0 text-gold-300 transition-transform group-hover:translate-x-0.5"
+              />
+            </div>
           </div>
         </Link>
       )}
