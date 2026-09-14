@@ -122,7 +122,7 @@ export default function TransparencyPage() {
           )}
         </div>
         <p className="mt-1.5 text-xs tracking-wide text-ink-400">
-          Transparency Article
+          Archives — council projects, updates, and how things are moving.
         </p>
       </header>
 
@@ -150,7 +150,7 @@ export default function TransparencyPage() {
             <div className="mb-2 flex items-center justify-between">
               <span className="inline-flex items-center gap-1.5 text-xs font-medium text-gold-300">
                 <Lock size={13} strokeWidth={2.2} />
-                New transparency post
+                New archive post
               </span>
               <button
                 onClick={() => {
@@ -231,7 +231,7 @@ export default function TransparencyPage() {
         {!loading && articles.length === 0 && (
           <EmptyState
             icon={<ShieldCheck size={20} strokeWidth={2} />}
-            message="No transparency posts yet — check back soon."
+            message="No archive posts yet — check back soon."
           />
         )}
 
