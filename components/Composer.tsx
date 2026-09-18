@@ -113,7 +113,7 @@ export function Composer({
           : "This post will formally reach the student council — BatStateU LIMA — and may be seen by other students. Kindly be respectful."}
       </p>
 
-      <div className="mt-2 flex items-center gap-1 self-start rounded-full border border-ink-600 bg-ink-900 p-0.5">
+      <div className="mt-2 inline-flex items-center gap-1 self-start rounded-full border border-ink-600 bg-ink-900 p-0.5">
         <button
           type="button"
           onClick={() => setVisibility("public")}
