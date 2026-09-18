@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { MessageCircle, Send, ShieldCheck, Trash2 } from "lucide-react";
+import { MessageCircle, Send, ShieldCheck, Trash2, Lock, Globe } from "lucide-react";
 import { supabase, type Comment } from "@/lib/supabaseClient";
 import { getAnonId, recentCommentCount, recordComment } from "@/lib/anonId";
 
@@ -48,6 +48,7 @@ export function CommentSection({
   }, [draft]);
 
   const [sscDraft, setSscDraft] = useState("");
+  const [sscVisibility, setSscVisibility] = useState<"public" | "ssc_only">("public");
   const [sscPosting, setSscPosting] = useState(false);
   const [sscError, setSscError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -57,12 +58,25 @@ export function CommentSection({
     setOpen(next);
     if (next && !loaded) {
       setLoading(true);
-      const { data, error } = await supabase
-        .from("comments")
-        .select("*")
-        .eq("post_id", postId)
-        .order("created_at", { ascending: true });
-      if (!error && data) setComments(data as Comment[]);
+      if (isAdmin && adminPassword) {
+        // Admin sees everything, including SSC-only internal replies.
+        try {
+          const res = await fetch(
+            `/api/comments?post_id=${encodeURIComponent(postId)}&password=${encodeURIComponent(adminPassword)}`
+          );
+          const json = await res.json().catch(() => ({}));
+          if (res.ok && json.comments) setComments(json.comments as Comment[]);
+        } catch {
+          // fall through with whatever (if anything) was already loaded
+        }
+      } else {
+        const { data, error } = await supabase
+          .from("comments")
+          .select("*")
+          .eq("post_id", postId)
+          .order("created_at", { ascending: true });
+        if (!error && data) setComments(data as Comment[]);
+      }
       setLoaded(true);
       setLoading(false);
     }
@@ -110,7 +124,12 @@ export function CommentSection({
       const res = await fetch("/api/comments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: adminPassword, post_id: postId, content })
+        body: JSON.stringify({
+          password: adminPassword,
+          post_id: postId,
+          content,
+          visibility: sscVisibility
+        })
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -119,6 +138,7 @@ export function CommentSection({
       }
       setComments((prev) => [...prev, json.comment as Comment]);
       setSscDraft("");
+      setSscVisibility("public");
     } catch {
       setSscError("Network error, please try again.");
     } finally {
@@ -171,14 +191,25 @@ export function CommentSection({
             c.is_official ? (
               <div
                 key={c.id}
-                className="rounded-lg border border-gold-600/40 bg-gold-liquid-soft/[0.08] px-3 py-2"
+                className={
+                  c.visibility === "ssc_only"
+                    ? "rounded-lg border border-dashed border-ink-500/60 bg-ink-800/40 px-3 py-2"
+                    : "rounded-lg border border-gold-600/40 bg-gold-liquid-soft/[0.08] px-3 py-2"
+                }
               >
                 <div className="mb-1 flex items-center justify-between gap-2">
-                  <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-gold-300">
-                    <Image src="/logo-mark.png" alt="" width={14} height={14} className="shrink-0" />
-                    <ShieldCheck size={11} strokeWidth={2.4} />
-                    Official reply · SSC
-                  </span>
+                  {c.visibility === "ssc_only" ? (
+                    <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-ink-400">
+                      <Lock size={11} strokeWidth={2.4} />
+                      Internal · SSC only
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-gold-300">
+                      <Image src="/logo-mark.png" alt="" width={14} height={14} className="shrink-0" />
+                      <ShieldCheck size={11} strokeWidth={2.4} />
+                      Official reply · SSC
+                    </span>
+                  )}
                   {isAdmin && (
                     <button
                       onClick={() => handleDeleteComment(c.id)}
@@ -191,7 +222,13 @@ export function CommentSection({
                     </button>
                   )}
                 </div>
-                <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-[#f2ecdb]/95">
+                <p
+                  className={
+                    c.visibility === "ssc_only"
+                      ? "whitespace-pre-wrap text-[13px] leading-relaxed text-ink-300"
+                      : "whitespace-pre-wrap text-[13px] leading-relaxed text-[#f2ecdb]/95"
+                  }
+                >
                   {c.content}
                 </p>
                 <p className="mt-1 text-[10px] text-ink-400">{timeAgo(c.created_at)}</p>
@@ -243,34 +280,68 @@ export function CommentSection({
           {error && <p className="text-[11px] text-blood-400">{error}</p>}
 
           {isAdmin && (
-            <div className="mt-1 flex items-center gap-2">
-              <div className="relative flex-1">
-                <Image
-                  src="/logo-mark.png"
-                  alt=""
-                  width={13}
-                  height={13}
-                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2"
-                />
-                <input
-                  value={sscDraft}
-                  onChange={(e) => setSscDraft(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleSendOfficial();
-                  }}
-                  placeholder="Reply as SSC (official)…"
-                  maxLength={MAX}
-                  className="w-full rounded-full border border-gold-600/40 bg-ink-900 py-1.5 pl-8 pr-3 text-xs text-[#f2ecdb] placeholder:text-gold-300/60 focus:border-gold-500 focus:outline-none"
-                />
+            <div className="mt-1 flex flex-col gap-1.5">
+              <div className="flex items-center gap-1 self-start rounded-full border border-ink-600 bg-ink-900 p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setSscVisibility("public")}
+                  aria-pressed={sscVisibility === "public"}
+                  title="Visible to everyone in the comment thread"
+                  className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[10.5px] font-medium transition-colors ${
+                    sscVisibility === "public"
+                      ? "bg-gold-liquid-soft text-ink-950"
+                      : "text-ink-400 hover:text-gold-300"
+                  }`}
+                >
+                  <Globe size={11} strokeWidth={2.4} />
+                  Public
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSscVisibility("ssc_only")}
+                  aria-pressed={sscVisibility === "ssc_only"}
+                  title="Internal note — visible only in admin mode"
+                  className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[10.5px] font-medium transition-colors ${
+                    sscVisibility === "ssc_only"
+                      ? "bg-ink-600 text-[#f2ecdb]"
+                      : "text-ink-400 hover:text-gold-300"
+                  }`}
+                >
+                  <Lock size={11} strokeWidth={2.4} />
+                  SSC only
+                </button>
               </div>
-              <button
-                onClick={handleSendOfficial}
-                disabled={!sscDraft.trim() || sscPosting}
-                aria-label="Send official SSC reply"
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gold-liquid-soft text-ink-950 disabled:opacity-30"
-              >
-                <Send size={12} strokeWidth={2.4} />
-              </button>
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <Image
+                    src="/logo-mark.png"
+                    alt=""
+                    width={13}
+                    height={13}
+                    className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2"
+                  />
+                  <input
+                    value={sscDraft}
+                    onChange={(e) => setSscDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleSendOfficial();
+                    }}
+                    placeholder={
+                      sscVisibility === "ssc_only" ? "Internal note (SSC only)…" : "Reply as SSC (official)…"
+                    }
+                    maxLength={MAX}
+                    className="w-full rounded-full border border-gold-600/40 bg-ink-900 py-1.5 pl-8 pr-3 text-xs text-[#f2ecdb] placeholder:text-gold-300/60 focus:border-gold-500 focus:outline-none"
+                  />
+                </div>
+                <button
+                  onClick={handleSendOfficial}
+                  disabled={!sscDraft.trim() || sscPosting}
+                  aria-label={sscVisibility === "ssc_only" ? "Save internal SSC note" : "Send official SSC reply"}
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gold-liquid-soft text-ink-950 disabled:opacity-30"
+                >
+                  <Send size={12} strokeWidth={2.4} />
+                </button>
+              </div>
             </div>
           )}
           {isAdmin && sscError && <p className="text-[11px] text-blood-400">{sscError}</p>}
