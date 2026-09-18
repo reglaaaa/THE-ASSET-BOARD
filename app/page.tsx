@@ -281,7 +281,14 @@ export default function Home() {
       <FAB onClick={() => setComposerOpen(true)} label="New post" />
 
       <BottomSheet open={composerOpen} onClose={() => setComposerOpen(false)} title="New post">
-        <Composer onSubmit={handleCreate} />
+        <Composer
+          onSubmit={handleCreate}
+          existingPosts={posts}
+          onSupportExisting={(post) => {
+            if (!liked.has(post.id)) toggleLike(post.id);
+            setComposerOpen(false);
+          }}
+        />
       </BottomSheet>
 
       <BottomSheet
