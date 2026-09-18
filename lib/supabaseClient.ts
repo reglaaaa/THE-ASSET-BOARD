@@ -25,6 +25,7 @@ export type Post = {
   likes_count: number;
   comments_count: number;
   created_at: string;
+  visibility: "public" | "ssc_only";
 };
 
 export type Comment = {
@@ -33,7 +34,6 @@ export type Comment = {
   content: string;
   created_at: string;
   is_official: boolean;
-  visibility: "public" | "ssc_only";
 };
 
 export type Article = {
