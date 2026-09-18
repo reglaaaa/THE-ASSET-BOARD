@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Flame, Pencil, Trash2, TriangleAlert, X, Check } from "lucide-react";
+import { Flame, Pencil, Trash2, TriangleAlert, X, Check, Lock } from "lucide-react";
 import { CATEGORIES, categoryMeta } from "@/lib/categories";
 import { STATUSES, statusMeta } from "@/lib/statuses";
 import type { Post, Category, PostStatus } from "@/lib/supabaseClient";
@@ -134,13 +134,23 @@ export function PostCard({
   }
 
   return (
-    <article className="py-4 transition-colors">
+    <article
+      className={`py-4 transition-colors ${
+        post.visibility === "ssc_only" ? "rounded-lg border border-dashed border-ink-500/50 bg-ink-800/30 px-3" : ""
+      }`}
+    >
       <div className="mb-2.5 flex items-center justify-between text-xs text-ink-400">
         <span className="inline-flex items-center gap-1.5 rounded-full border border-ink-600 px-2.5 py-1 text-gold-300">
           <Icon size={13} strokeWidth={2} />
           {meta.label}
         </span>
         <div className="flex items-center gap-2">
+          {post.visibility === "ssc_only" && (
+            <span className="inline-flex items-center gap-1 text-ink-400" title="Only visible in admin mode">
+              <Lock size={12} strokeWidth={2.4} />
+              SSC only
+            </span>
+          )}
           {post.is_urgent && (
             <span className="inline-flex items-center gap-1 text-blood-400">
               <TriangleAlert size={13} strokeWidth={2.2} />
