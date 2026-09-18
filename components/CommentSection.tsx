@@ -1,10 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import { MessageCircle, Send, ShieldCheck, Trash2 } from "lucide-react";
 import { supabase, type Comment } from "@/lib/supabaseClient";
-import { getAnonId } from "@/lib/anonId";
+import { getAnonId, recentCommentCount, recordComment } from "@/lib/anonId";
+
+// Warn once someone is about to send their 3rd comment within this window.
+const FREQUENT_COMMENT_THRESHOLD = 2;
 
 const MAX = 300;
 
@@ -36,6 +39,13 @@ export function CommentSection({
   const [draft, setDraft] = useState("");
   const [posting, setPosting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showFrequentWarning, setShowFrequentWarning] = useState(false);
+  const [acknowledgedFrequent, setAcknowledgedFrequent] = useState(false);
+
+  // Re-warn if they keep editing after acknowledging the warning once.
+  useEffect(() => {
+    setAcknowledgedFrequent(false);
+  }, [draft]);
 
   const [sscDraft, setSscDraft] = useState("");
   const [sscPosting, setSscPosting] = useState(false);
@@ -58,9 +68,19 @@ export function CommentSection({
     }
   }
 
-  async function handleSend() {
+  function handleSend() {
     const content = draft.trim();
     if (!content || content.length > MAX || posting) return;
+
+    if (!acknowledgedFrequent && recentCommentCount() >= FREQUENT_COMMENT_THRESHOLD) {
+      setShowFrequentWarning(true);
+      return;
+    }
+
+    doSend(content);
+  }
+
+  async function doSend(content: string) {
     setPosting(true);
     setError(null);
 
@@ -73,6 +93,7 @@ export function CommentSection({
     if (error) {
       setError(error.message || "Couldn't post that comment — please try again.");
     } else {
+      recordComment();
       setComments((prev) => [...prev, data as Comment]);
       setDraft("");
     }
@@ -253,6 +274,38 @@ export function CommentSection({
             </div>
           )}
           {isAdmin && sscError && <p className="text-[11px] text-blood-400">{sscError}</p>}
+        </div>
+      )}
+
+      {showFrequentWarning && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4">
+          <div className="w-full max-w-sm rounded-xl border border-ink-600 bg-ink-900 p-4 shadow-gold">
+            <p className="font-display text-sm font-bold text-[#f2ecdb]">
+              You just commented, is this needed?
+            </p>
+            <p className="mt-1.5 text-xs text-ink-400">
+              You&apos;ve commented a few times in the last 10 minutes. Give people
+              a chance to reply before adding more.
+            </p>
+            <div className="mt-4 flex items-center justify-end gap-2">
+              <button
+                onClick={() => setShowFrequentWarning(false)}
+                className="rounded-full px-3.5 py-1.5 text-xs font-medium text-ink-400 hover:text-ink-200"
+              >
+                Wait
+              </button>
+              <button
+                onClick={() => {
+                  setAcknowledgedFrequent(true);
+                  setShowFrequentWarning(false);
+                  doSend(draft.trim());
+                }}
+                className="rounded-full bg-gold-liquid-soft px-3.5 py-1.5 text-xs font-medium text-ink-950"
+              >
+                Send anyway
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

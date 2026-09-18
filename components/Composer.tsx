@@ -5,11 +5,12 @@ import { Send, TriangleAlert, Flame } from "lucide-react";
 import { CATEGORIES } from "@/lib/categories";
 import type { Category, Post } from "@/lib/supabaseClient";
 import { findSimilar, type SimilarMatch } from "@/lib/similarity";
+import { recentPostCount } from "@/lib/anonId";
 
 const MAX = 500;
 const SHORT_WORD_LIMIT = 4;
 
-type ModalStep = null | "duplicate" | "short";
+type ModalStep = null | "duplicate" | "short" | "frequent";
 
 export function Composer({
   onSubmit,
@@ -32,12 +33,14 @@ export function Composer({
   const [modal, setModal] = useState<ModalStep>(null);
   const [acknowledgedDuplicate, setAcknowledgedDuplicate] = useState(false);
   const [acknowledgedShort, setAcknowledgedShort] = useState(false);
+  const [acknowledgedFrequent, setAcknowledgedFrequent] = useState(false);
   const [duplicateMatches, setDuplicateMatches] = useState<SimilarMatch<Post>[]>([]);
 
   // Re-warn if they keep editing after acknowledging a warning once.
   useEffect(() => {
     setAcknowledgedDuplicate(false);
     setAcknowledgedShort(false);
+    setAcknowledgedFrequent(false);
   }, [content]);
 
   const canPost = content.trim().length > 0 && content.length <= MAX && !posting;
@@ -55,9 +58,9 @@ export function Composer({
     }
   }
 
-  function attemptSubmit() {
-    if (!canPost) return;
-
+  // Duplicate + short checks, run once the "posting again soon?" nudge
+  // (if any) has been cleared.
+  function checkDuplicateAndShort() {
     if (!acknowledgedDuplicate) {
       const matches = findSimilar(content, existingPosts, (p) => p.content, {
         threshold: 0.2,
@@ -77,6 +80,17 @@ export function Composer({
     }
 
     doSubmit();
+  }
+
+  function attemptSubmit() {
+    if (!canPost) return;
+
+    if (!acknowledgedFrequent && recentPostCount() > 0) {
+      setModal("frequent");
+      return;
+    }
+
+    checkDuplicateAndShort();
   }
 
   return (
@@ -145,6 +159,38 @@ export function Composer({
           </button>
         </div>
       </div>
+
+      {modal === "frequent" && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4">
+          <div className="w-full max-w-sm rounded-xl border border-ink-600 bg-ink-900 p-4 shadow-gold">
+            <p className="font-display text-sm font-bold text-[#f2ecdb]">
+              You just posted, is this urgent?
+            </p>
+            <p className="mt-1.5 text-xs text-ink-400">
+              You&apos;ve already posted within the last hour. If this can wait,
+              consider commenting on your earlier post instead.
+            </p>
+            <div className="mt-4 flex items-center justify-end gap-2">
+              <button
+                onClick={() => setModal(null)}
+                className="rounded-full px-3.5 py-1.5 text-xs font-medium text-ink-400 hover:text-ink-200"
+              >
+                Wait
+              </button>
+              <button
+                onClick={() => {
+                  setAcknowledgedFrequent(true);
+                  setModal(null);
+                  checkDuplicateAndShort();
+                }}
+                className="rounded-full bg-gold-liquid-soft px-3.5 py-1.5 text-xs font-medium text-ink-950"
+              >
+                Post anyway
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {modal === "duplicate" && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4">
