@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ChevronRight, Clock, Inbox, Lock, ShieldCheck, TrendingUp } from "lucide-react";
 import { supabase, type Post, type Category, type Article } from "@/lib/supabaseClient";
@@ -33,16 +33,23 @@ export default function Home() {
   const [adminSubmitting, setAdminSubmitting] = useState(false);
   const [adminError, setAdminError] = useState<string | null>(null);
 
+  // Always points at the latest loadPosts closure (current isAdmin /
+  // adminPassword), so the realtime subscription below — set up once on
+  // mount — never calls a stale, pre-login version of it.
+  const loadPostsRef = useRef<() => Promise<void>>();
+  useEffect(() => {
+    loadPostsRef.current = loadPosts;
+  });
+
   useEffect(() => {
     setLiked(getLikedSet());
-    loadPosts();
     loadLatestArticle();
 
     // Live updates: new posts and like-count changes appear without a refresh
     const channel = supabase
       .channel("posts-feed")
       .on("postgres_changes", { event: "*", schema: "public", table: "posts" }, () => {
-        loadPosts();
+        loadPostsRef.current?.();
       })
       .subscribe();
 
@@ -51,6 +58,14 @@ export default function Home() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Reload with the admin (or public) query whenever admin status changes —
+  // covers the initial load and immediately picks up SSC-only posts right
+  // after logging in, instead of waiting for the next realtime event.
+  useEffect(() => {
+    loadPosts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdmin]);
 
   async function loadLatestArticle() {
     const { data, error } = await supabase
