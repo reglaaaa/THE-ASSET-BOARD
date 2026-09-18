@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ChevronRight, Clock, Inbox, Lock, ShieldCheck, TrendingUp } from "lucide-react";
 import { supabase, type Post, type Category, type Article } from "@/lib/supabaseClient";
-import { getAnonId, getLikedSet, persistLiked } from "@/lib/anonId";
+import { getAnonId, getLikedSet, persistLiked, recordPost } from "@/lib/anonId";
 import { useAdmin } from "@/lib/useAdmin";
 import { Logo } from "@/components/Logo";
 import { Composer } from "@/components/Composer";
@@ -81,6 +81,7 @@ export default function Home() {
       alert(error.message || "Couldn't post that — please try again.");
       return;
     }
+    recordPost();
     setComposerOpen(false);
     await loadPosts();
   }
