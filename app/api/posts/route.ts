@@ -28,7 +28,33 @@ async function withinRateLimit(ip: string) {
 
 const STATUS_VALUES = ["investigating", "executing", "resolved", "denied"];
 
-// Admin edit of a post: content, category, urgent flag, and/or status flag.
+// Admin fetch of ALL posts, including SSC-only ones the public anon-key
+// client can no longer see (see migration_post_visibility.sql).
+export async function GET(req: NextRequest) {
+  const ip = getClientIp(req);
+  if (!(await withinRateLimit(ip))) {
+    return NextResponse.json({ error: "Too many attempts, please wait a minute." }, { status: 429 });
+  }
+
+  const { searchParams } = new URL(req.url);
+  const password = searchParams.get("password");
+
+  if (!checkPassword(password)) {
+    return NextResponse.json({ error: "Incorrect admin password." }, { status: 401 });
+  }
+
+  const { data, error } = await supabaseAdmin()
+    .from("posts")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+  return NextResponse.json({ posts: data });
+}
+
+// Admin edit of a post: content, category, urgent flag, visibility, and/or status flag.
 export async function PATCH(req: NextRequest) {
   const ip = getClientIp(req);
   if (!(await withinRateLimit(ip))) {
@@ -39,7 +65,7 @@ export async function PATCH(req: NextRequest) {
   if (!body) {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
-  const { password, id, content, category, is_urgent, status } = body;
+  const { password, id, content, category, is_urgent, status, visibility } = body;
 
   if (!checkPassword(password)) {
     return NextResponse.json({ error: "Incorrect admin password." }, { status: 401 });
@@ -71,6 +97,12 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Invalid status." }, { status: 400 });
     }
     update.status = status;
+  }
+  if (visibility !== undefined) {
+    if (visibility !== "public" && visibility !== "ssc_only") {
+      return NextResponse.json({ error: "Invalid visibility." }, { status: 400 });
+    }
+    update.visibility = visibility;
   }
   if (Object.keys(update).length === 0) {
     return NextResponse.json({ error: "Nothing to update." }, { status: 400 });
