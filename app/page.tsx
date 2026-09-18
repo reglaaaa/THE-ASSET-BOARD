@@ -62,6 +62,20 @@ export default function Home() {
   }
 
   async function loadPosts() {
+    if (isAdmin && adminPassword) {
+      // Admin sees everything, including SSC-only posts.
+      try {
+        const res = await fetch(`/api/posts?password=${encodeURIComponent(adminPassword)}`);
+        const json = await res.json().catch(() => ({}));
+        if (res.ok && json.posts) {
+          setPosts(json.posts as Post[]);
+          setLoading(false);
+          return;
+        }
+      } catch {
+        // fall through to the public query below
+      }
+    }
     const { data, error } = await supabase
       .from("posts")
       .select("*")
@@ -70,12 +84,18 @@ export default function Home() {
     setLoading(false);
   }
 
-  async function handleCreate(content: string, category: Category, urgent: boolean) {
+  async function handleCreate(
+    content: string,
+    category: Category,
+    urgent: boolean,
+    visibility: "public" | "ssc_only"
+  ) {
     const { error } = await supabase.rpc("create_post", {
       p_content: content,
       p_category: category,
       p_is_urgent: urgent,
-      p_anon_id: getAnonId()
+      p_anon_id: getAnonId(),
+      p_visibility: visibility
     });
     if (error) {
       alert(error.message || "Couldn't post that — please try again.");
