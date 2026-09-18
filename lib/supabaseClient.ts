@@ -33,6 +33,7 @@ export type Comment = {
   content: string;
   created_at: string;
   is_official: boolean;
+  visibility: "public" | "ssc_only";
 };
 
 export type Article = {
