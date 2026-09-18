@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const urgentTag = record.is_urgent ? "🚨 URGENT — " : "";
+  const urgentTag = record.is_urgent ? "URGENT — " : "";
   const subject = `${urgentTag}New ${record.category} on The Asset`;
   const text = [
     `A new ${record.category} was just posted.`,
