@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Send, TriangleAlert, Flame } from "lucide-react";
+import { Send, TriangleAlert, Flame, Globe, Lock } from "lucide-react";
 import { CATEGORIES } from "@/lib/categories";
 import type { Category, Post } from "@/lib/supabaseClient";
 import { findSimilar, type SimilarMatch } from "@/lib/similarity";
@@ -11,13 +11,14 @@ const MAX = 500;
 const SHORT_WORD_LIMIT = 4;
 
 type ModalStep = null | "duplicate" | "short" | "frequent";
+type Visibility = "public" | "ssc_only";
 
 export function Composer({
   onSubmit,
   existingPosts = [],
   onSupportExisting
 }: {
-  onSubmit: (content: string, category: Category, urgent: boolean) => Promise<void>;
+  onSubmit: (content: string, category: Category, urgent: boolean, visibility: Visibility) => Promise<void>;
   // Posts already loaded on the page — reused for the client-side
   // duplicate check, no extra fetch needed.
   existingPosts?: Post[];
@@ -28,6 +29,7 @@ export function Composer({
   const [content, setContent] = useState("");
   const [category, setCategory] = useState<Category>("concern");
   const [urgent, setUrgent] = useState(false);
+  const [visibility, setVisibility] = useState<Visibility>("public");
   const [posting, setPosting] = useState(false);
 
   const [modal, setModal] = useState<ModalStep>(null);
@@ -50,9 +52,10 @@ export function Composer({
     setPosting(true);
     setModal(null);
     try {
-      await onSubmit(content.trim(), category, urgent);
+      await onSubmit(content.trim(), category, urgent, visibility);
       setContent("");
       setUrgent(false);
+      setVisibility("public");
     } finally {
       setPosting(false);
     }
@@ -105,9 +108,37 @@ export function Composer({
       />
 
       <p className="mt-1 text-[10.5px] leading-snug text-ink-500/70">
-        This post will formally reach the student council — BatStateU LIMA —
-        and may be seen by other students. Kindly be respectful.
+        {visibility === "ssc_only"
+          ? "Only the Student Council will see this — it won't appear in the public feed."
+          : "This post will formally reach the student council — BatStateU LIMA — and may be seen by other students. Kindly be respectful."}
       </p>
+
+      <div className="mt-2 flex items-center gap-1 self-start rounded-full border border-ink-600 bg-ink-900 p-0.5">
+        <button
+          type="button"
+          onClick={() => setVisibility("public")}
+          aria-pressed={visibility === "public"}
+          title="Visible to everyone in the public feed"
+          className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[10.5px] font-medium transition-colors ${
+            visibility === "public" ? "bg-gold-liquid-soft text-ink-950" : "text-ink-400 hover:text-gold-300"
+          }`}
+        >
+          <Globe size={11} strokeWidth={2.4} />
+          Public
+        </button>
+        <button
+          type="button"
+          onClick={() => setVisibility("ssc_only")}
+          aria-pressed={visibility === "ssc_only"}
+          title="Only the Student Council will see this"
+          className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[10.5px] font-medium transition-colors ${
+            visibility === "ssc_only" ? "bg-ink-600 text-[#f2ecdb]" : "text-ink-400 hover:text-gold-300"
+          }`}
+        >
+          <Lock size={11} strokeWidth={2.4} />
+          SSC only
+        </button>
+      </div>
 
       <div className="mt-2 flex flex-wrap items-center justify-between gap-2 border-t border-ink-700 pt-2.5">
         <div className="flex items-center gap-1.5">
