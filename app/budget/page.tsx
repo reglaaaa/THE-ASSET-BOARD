@@ -25,7 +25,7 @@ import { useAdmin } from "@/lib/useAdmin";
 import { Logo } from "@/components/Logo";
 import { EmptyState } from "@/components/EmptyState";
 import { BudgetSkeleton } from "@/components/skeletons/BudgetSkeleton";
-import { RefreshButton } from "@/components/RefreshButton";
+import { RefreshStatus } from "@/components/RefreshStatus";
 import { useRateLimitedRefresh } from "@/lib/useRateLimitedRefresh";
 
 const PESO = new Intl.NumberFormat("en-PH", {
@@ -976,6 +976,7 @@ export default function BudgetPage() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null);
 
   const [budgetOpen, setBudgetOpen] = useState(false);
   const [spendingOpen, setSpendingOpen] = useState(false);
@@ -1004,6 +1005,7 @@ export default function BudgetPage() {
     if (!s.error && s.data) setSources(s.data as BudgetSource[]);
     if (!e.error && e.data) setExpenses(e.data as Expense[]);
     if (!p.error && p.data) setProjects(p.data as Project[]);
+    if (!s.error && !e.error && !p.error) setLastUpdatedAt(Date.now());
     setLoading(false);
   }
 
@@ -1016,12 +1018,13 @@ export default function BudgetPage() {
       <header className="sticky top-0 z-10 -mx-4 border-b border-ink-700 bg-ink-950/85 px-4 pb-3 pt-5 backdrop-blur">
         <div className="flex items-start justify-between gap-3">
           <Logo />
-          <div className="flex shrink-0 items-center gap-2">
-            <RefreshButton
+          <div className="flex shrink-0 items-center gap-3">
+            <RefreshStatus
               onClick={refreshBudget}
               isRefreshing={isRefreshing}
               isRateLimited={isRateLimited}
               cooldownSecondsLeft={cooldownSecondsLeft}
+              lastUpdatedAt={lastUpdatedAt}
             />
             {adminMode && (
               <button
