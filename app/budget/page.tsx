@@ -15,12 +15,19 @@ import {
   X
 } from "lucide-react";
 import {
-  supabase,
   type BudgetSource,
   type Expense,
   type Project,
   type ProjectStatus
 } from "@/lib/supabaseClient";
+import {
+  fetchTotals,
+  fetchSources,
+  fetchExpenses,
+  fetchProjects,
+  invalidateBudgetCache,
+  type BudgetTotals
+} from "@/lib/budgetData";
 import { useAdmin } from "@/lib/useAdmin";
 import { Logo } from "@/components/Logo";
 import { EmptyState } from "@/components/EmptyState";
@@ -990,10 +997,14 @@ function ProjectsSection({
 }
 
 export default function BudgetPage() {
-  const [sources, setSources] = useState<BudgetSource[]>([]);
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Header numbers come from one cheap aggregate query. Full row lists
+  // (below) are only fetched the first time a card is actually expanded.
+  const [totals, setTotals] = useState<BudgetTotals | null>(null);
+  const [sources, setSources] = useState<BudgetSource[] | null>(null);
+  const [expenses, setExpenses] = useState<Expense[] | null>(null);
+  const [projects, setProjects] = useState<Project[] | null>(null);
+  const [sourcesLoading, setSourcesLoading] = useState(false);
+  const [projectsLoading, setProjectsLoading] = useState(false);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null);
 
   const [sourcesOpen, setSourcesOpen] = useState(false);
@@ -1002,8 +1013,68 @@ export default function BudgetPage() {
   const { isAdmin: adminMode, password: unlockedPassword, login, logout } = useAdmin();
 
   useEffect(() => {
-    load();
+    loadTotals();
   }, []);
+
+  async function loadTotals(force = false) {
+    try {
+      const next = await fetchTotals(force);
+      setTotals(next);
+      setLastUpdatedAt(Date.now());
+    } catch {
+      // leave prior totals on screen; header just won't update this time
+    }
+  }
+
+  async function loadSources(force = false) {
+    setSourcesLoading(true);
+    try {
+      setSources(await fetchSources(force));
+    } catch {
+      // keep whatever was already loaded
+    } finally {
+      setSourcesLoading(false);
+    }
+  }
+
+  async function loadProjectsAndExpenses(force = false) {
+    setProjectsLoading(true);
+    try {
+      const [p, e] = await Promise.all([fetchProjects(force), fetchExpenses(force)]);
+      setProjects(p);
+      setExpenses(e);
+    } catch {
+      // keep whatever was already loaded
+    } finally {
+      setProjectsLoading(false);
+    }
+  }
+
+  function toggleSources() {
+    setSourcesOpen((v) => {
+      const next = !v;
+      if (next && sources === null) loadSources();
+      return next;
+    });
+  }
+
+  function toggleProjects() {
+    setProjectsOpen((v) => {
+      const next = !v;
+      if (next && (projects === null || expenses === null)) loadProjectsAndExpenses();
+      return next;
+    });
+  }
+
+  // Refetches the totals, plus whichever lists are currently on screen —
+  // not every table every time.
+  async function refreshAll() {
+    invalidateBudgetCache();
+    const jobs: Promise<unknown>[] = [loadTotals(true)];
+    if (sourcesOpen) jobs.push(loadSources(true));
+    if (projectsOpen) jobs.push(loadProjectsAndExpenses(true));
+    await Promise.all(jobs);
+  }
 
   // Manual refresh only — no realtime subscription.
   const {
@@ -1011,31 +1082,15 @@ export default function BudgetPage() {
     isRefreshing,
     isRateLimited,
     cooldownSecondsLeft
-  } = useRateLimitedRefresh(load);
+  } = useRateLimitedRefresh(refreshAll);
 
-  async function load() {
-    const [s, e, p] = await Promise.all([
-      supabase.from("budget_sources").select("*").order("date_received", { ascending: false }),
-      supabase.from("expenses").select("*").order("date_spent", { ascending: false }),
-      supabase.from("projects").select("*").order("created_at", { ascending: false })
-    ]);
-    if (!s.error && s.data) setSources(s.data as BudgetSource[]);
-    if (!e.error && e.data) setExpenses(e.data as Expense[]);
-    if (!p.error && p.data) setProjects(p.data as Project[]);
-    if (!s.error && !e.error && !p.error) setLastUpdatedAt(Date.now());
-    setLoading(false);
-  }
+  const loading = totals === null;
 
-  // Everything below is derived — nothing here is entered by hand.
-  const totalBudget = useMemo(() => sources.reduce((sum, s) => sum + Number(s.amount), 0), [sources]);
-  const totalProjectsBudget = useMemo(
-    () => projects.reduce((sum, p) => sum + Number(p.budget_used), 0),
-    [projects]
-  );
-  const totalOtherSpending = useMemo(
-    () => expenses.reduce((sum, e) => sum + Number(e.amount), 0),
-    [expenses]
-  );
+  // Everything below is derived from the aggregate totals — nothing
+  // here is entered by hand.
+  const totalBudget = totals?.totalBudget ?? 0;
+  const totalProjectsBudget = totals?.totalProjectsBudget ?? 0;
+  const totalOtherSpending = totals?.totalOtherSpending ?? 0;
   const totalUsed = totalProjectsBudget + totalOtherSpending;
   const surplus = totalBudget - totalUsed;
   const isDeficit = surplus < 0;
@@ -1098,17 +1153,25 @@ export default function BudgetPage() {
             icon={<Coins size={20} strokeWidth={2.2} />}
             value={money(totalBudget)}
             label="Budget Sources"
-            sublabel={`${sources.length} source${sources.length === 1 ? "" : "s"}`}
+            sublabel={`${totals?.sourceCount ?? 0} source${(totals?.sourceCount ?? 0) === 1 ? "" : "s"}`}
             open={sourcesOpen}
-            onToggle={() => setSourcesOpen((v) => !v)}
+            onToggle={toggleSources}
           >
-            <SourcesSection
-              sources={sources}
-              adminMode={adminMode}
-              unlockedPassword={unlockedPassword}
-              onWrongPassword={logout}
-              onChanged={load}
-            />
+            {sourcesLoading && sources === null ? (
+              <p className="py-3 text-center text-xs text-ink-400">Loading…</p>
+            ) : (
+              <SourcesSection
+                sources={sources ?? []}
+                adminMode={adminMode}
+                unlockedPassword={unlockedPassword}
+                onWrongPassword={logout}
+                onChanged={() => {
+                  invalidateBudgetCache();
+                  loadTotals(true);
+                  loadSources(true);
+                }}
+              />
+            )}
           </StatCard>
 
           {/* 3. Projects (+ other spending, nested) */}
@@ -1117,18 +1180,28 @@ export default function BudgetPage() {
             accent="blood"
             value={money(-totalUsed)}
             label="Projects"
-            sublabel={`${projects.length} project${projects.length === 1 ? "" : "s"}, ${expenses.length} other`}
+            sublabel={`${totals?.projectCount ?? 0} project${(totals?.projectCount ?? 0) === 1 ? "" : "s"}, ${
+              totals?.expenseCount ?? 0
+            } other`}
             open={projectsOpen}
-            onToggle={() => setProjectsOpen((v) => !v)}
+            onToggle={toggleProjects}
           >
-            <ProjectsSection
-              projects={projects}
-              expenses={expenses}
-              adminMode={adminMode}
-              unlockedPassword={unlockedPassword}
-              onWrongPassword={logout}
-              onChanged={load}
-            />
+            {projectsLoading && (projects === null || expenses === null) ? (
+              <p className="py-3 text-center text-xs text-ink-400">Loading…</p>
+            ) : (
+              <ProjectsSection
+                projects={projects ?? []}
+                expenses={expenses ?? []}
+                adminMode={adminMode}
+                unlockedPassword={unlockedPassword}
+                onWrongPassword={logout}
+                onChanged={() => {
+                  invalidateBudgetCache();
+                  loadTotals(true);
+                  loadProjectsAndExpenses(true);
+                }}
+              />
+            )}
           </StatCard>
         </section>
       )}
