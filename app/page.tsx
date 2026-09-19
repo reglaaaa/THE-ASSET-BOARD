@@ -1,33 +1,35 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { ChevronRight, Clock, Inbox, Lock, ShieldCheck, TrendingUp } from "lucide-react";
+import { Inbox, Lock, ShieldCheck } from "lucide-react";
 import { supabase, type Post, type Category, type Article } from "@/lib/supabaseClient";
 import { getAnonId, getLikedSet, persistLiked, recordPost } from "@/lib/anonId";
 import { useAdmin } from "@/lib/useAdmin";
 import { Logo } from "@/components/Logo";
 import { Composer } from "@/components/Composer";
-import { CategoryFilter } from "@/components/CategoryFilter";
+import { FilterRow, type FeedFilter } from "@/components/FilterRow";
+import { SortToggle, type Sort } from "@/components/SortToggle";
+import { HeroCard, type BudgetSummary } from "@/components/HeroCard";
 import { PostCard } from "@/components/PostCard";
 import { FAB } from "@/components/FAB";
 import { BottomSheet } from "@/components/BottomSheet";
 import { EmptyState } from "@/components/EmptyState";
 import { FeedSkeleton } from "@/components/skeletons/PostCardSkeleton";
 import { PullToRefresh } from "@/components/PullToRefresh";
-import { RefreshButton } from "@/components/RefreshButton";
+import { RefreshStatus } from "@/components/RefreshStatus";
 import { useRateLimitedRefresh } from "@/lib/useRateLimitedRefresh";
-
-type Sort = "new" | "top";
 
 export default function Home() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [latestArticle, setLatestArticle] = useState<Article | null>(null);
-  const [filter, setFilter] = useState<Category | "all">("all");
+  const [budgetSummary, setBudgetSummary] = useState<BudgetSummary | null>(null);
+  const [heroChoice, setHeroChoice] = useState<"article" | "budget" | null>(null);
+  const [filter, setFilter] = useState<FeedFilter>("all");
   const [sort, setSort] = useState<Sort>("new");
   const [liked, setLiked] = useState<Set<string>>(new Set());
   const [composerOpen, setComposerOpen] = useState(false);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null);
 
   const { isAdmin, password: adminPassword, login, logout } = useAdmin();
   const [adminSheetOpen, setAdminSheetOpen] = useState(false);
@@ -37,7 +39,7 @@ export default function Home() {
 
   useEffect(() => {
     setLiked(getLikedSet());
-    loadLatestArticle();
+    loadHero();
   }, []);
 
   // Manual refresh only — no realtime subscription. Shared cooldown between
@@ -58,13 +60,36 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdmin]);
 
-  async function loadLatestArticle() {
-    const { data, error } = await supabase
-      .from("articles")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(1);
-    if (!error && data && data.length > 0) setLatestArticle(data[0] as Article);
+  // Loads both the latest archives post and the budget snapshot, then
+  // randomly features one of them in the hero slot (50/50). Falls back
+  // to whichever one actually has data if only one does.
+  async function loadHero() {
+    const [articleRes, sourcesRes, expensesRes] = await Promise.all([
+      supabase.from("articles").select("*").order("created_at", { ascending: false }).limit(1),
+      supabase.from("budget_sources").select("amount"),
+      supabase.from("expenses").select("amount")
+    ]);
+
+    const article =
+      !articleRes.error && articleRes.data && articleRes.data.length > 0
+        ? (articleRes.data[0] as Article)
+        : null;
+    setLatestArticle(article);
+
+    let summary: BudgetSummary | null = null;
+    if (!sourcesRes.error && !expensesRes.error && sourcesRes.data && expensesRes.data) {
+      const totalBudget = sourcesRes.data.reduce((sum, r) => sum + Number(r.amount), 0);
+      const totalSpending = expensesRes.data.reduce((sum, r) => sum + Number(r.amount), 0);
+      summary = { totalBudget, totalSpending };
+      setBudgetSummary(summary);
+    }
+
+    const preferArticle = Math.random() < 0.5;
+    if (preferArticle && article) setHeroChoice("article");
+    else if (!preferArticle && summary) setHeroChoice("budget");
+    else if (article) setHeroChoice("article");
+    else if (summary) setHeroChoice("budget");
+    else setHeroChoice(null);
   }
 
   async function loadPosts() {
@@ -76,6 +101,7 @@ export default function Home() {
         if (res.ok && json.posts) {
           setPosts(json.posts as Post[]);
           setLoading(false);
+          setLastUpdatedAt(Date.now());
           return;
         }
       } catch {
@@ -86,7 +112,10 @@ export default function Home() {
       .from("posts")
       .select("*")
       .order("created_at", { ascending: false });
-    if (!error && data) setPosts(data as Post[]);
+    if (!error && data) {
+      setPosts(data as Post[]);
+      setLastUpdatedAt(Date.now());
+    }
     setLoading(false);
   }
 
@@ -183,7 +212,9 @@ export default function Home() {
   }
 
   const visiblePosts = useMemo(() => {
-    let list = filter === "all" ? posts : posts.filter((p) => p.category === filter);
+    let list = posts;
+    if (filter === "urgent") list = posts.filter((p) => p.is_urgent);
+    else if (filter !== "all") list = posts.filter((p) => p.category === filter);
     if (sort === "top") {
       list = [...list].sort((a, b) => b.likes_count - a.likes_count);
     }
@@ -220,71 +251,28 @@ export default function Home() {
         </p>
 
         <div className="mt-4 flex items-center justify-between gap-3">
-          <CategoryFilter active={filter} onChange={setFilter} />
-          <div className="flex shrink-0 items-center gap-2">
-            <RefreshButton
-              onClick={refreshPosts}
-              isRefreshing={isRefreshing}
-              isRateLimited={isRateLimited}
-              cooldownSecondsLeft={cooldownSecondsLeft}
-            />
-            <div className="flex shrink-0 items-center gap-1 rounded-full border border-ink-600 p-0.5">
-              <button
-                title="Newest"
-                aria-pressed={sort === "new"}
-                onClick={() => setSort("new")}
-                className={`flex h-7 w-7 items-center justify-center rounded-full transition-colors ${
-                  sort === "new" ? "bg-gold-liquid-soft text-ink-950" : "text-ink-400"
-                }`}
-              >
-                <Clock size={13} strokeWidth={2.2} />
-              </button>
-              <button
-                title="Top"
-                aria-pressed={sort === "top"}
-                onClick={() => setSort("top")}
-                className={`flex h-7 w-7 items-center justify-center rounded-full transition-colors ${
-                  sort === "top" ? "bg-gold-liquid-soft text-ink-950" : "text-ink-400"
-                }`}
-              >
-                <TrendingUp size={13} strokeWidth={2.2} />
-              </button>
-            </div>
-          </div>
+          <SortToggle value={sort} onChange={setSort} />
+          <RefreshStatus
+            onClick={refreshPosts}
+            isRefreshing={isRefreshing}
+            isRateLimited={isRateLimited}
+            cooldownSecondsLeft={cooldownSecondsLeft}
+            lastUpdatedAt={lastUpdatedAt}
+          />
         </div>
       </header>
 
-      {latestArticle && (
-        <Link
-          href="/transparency"
-          className="group mt-4 block rounded-xl bg-gold-liquid-soft p-[1.5px] shadow-gold transition-transform active:scale-[0.99]"
-        >
-          <div className="rounded-[10px] bg-ink-900 p-3.5 transition-colors group-hover:bg-ink-900/90">
-            <div className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-gold-300">
-              <ShieldCheck size={11} strokeWidth={2.4} />
-              From the Archives
-            </div>
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <h2 className="font-display text-sm font-bold leading-snug text-[#f2ecdb]">
-                  {latestArticle.title}
-                </h2>
-                <p className="mt-1 line-clamp-2 text-[13px] leading-relaxed text-ink-400">
-                  {latestArticle.body.split(/\n\s*\n/)[0]}
-                </p>
-              </div>
-              <ChevronRight
-                size={16}
-                strokeWidth={2.4}
-                className="mt-0.5 shrink-0 text-gold-300 transition-transform group-hover:translate-x-0.5"
-              />
-            </div>
-          </div>
-        </Link>
-      )}
+      <HeroCard
+        article={heroChoice === "article" ? latestArticle : null}
+        budgetSummary={heroChoice === "budget" ? budgetSummary : null}
+      />
+
+      <div className="mt-3">
+        <FilterRow active={filter} onChange={setFilter} />
+      </div>
 
       <PullToRefresh onRefresh={refreshPosts} disabled={isRateLimited}>
-        <section className="mt-4 flex flex-col gap-2.5">
+        <section className="mt-3 flex flex-col gap-2.5">
           {loading && <FeedSkeleton />}
 
           {!loading && visiblePosts.length === 0 && (
