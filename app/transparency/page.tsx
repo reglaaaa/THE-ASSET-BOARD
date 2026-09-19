@@ -6,6 +6,8 @@ import { supabase, type Article } from "@/lib/supabaseClient";
 import { useAdmin } from "@/lib/useAdmin";
 import { Logo } from "@/components/Logo";
 import { EmptyState } from "@/components/EmptyState";
+import { RefreshButton } from "@/components/RefreshButton";
+import { useRateLimitedRefresh } from "@/lib/useRateLimitedRefresh";
 
 export default function TransparencyPage() {
   const [articles, setArticles] = useState<Article[]>([]);
@@ -23,18 +25,15 @@ export default function TransparencyPage() {
 
   useEffect(() => {
     loadArticles();
-
-    const channel = supabase
-      .channel("articles-feed")
-      .on("postgres_changes", { event: "*", schema: "public", table: "articles" }, () => {
-        loadArticles();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, []);
+
+  // Manual refresh only — no realtime subscription.
+  const {
+    refresh: refreshArticles,
+    isRefreshing,
+    isRateLimited,
+    cooldownSecondsLeft
+  } = useRateLimitedRefresh(loadArticles);
 
   async function loadArticles() {
     const { data, error } = await supabase
@@ -108,21 +107,29 @@ export default function TransparencyPage() {
       <header className="sticky top-0 z-10 -mx-4 border-b border-ink-700 bg-ink-950/85 px-4 pb-3 pt-5 backdrop-blur">
         <div className="flex items-start justify-between gap-3">
           <Logo />
-          {isAdmin && (
-            <button
-              onClick={() => {
-                if (window.confirm("Exit admin mode?")) logout();
-              }}
-              title="Admin mode, tap to exit"
-              className="mt-0.5 flex shrink-0 items-center gap-1.5 rounded-full border border-gold-600/50 bg-gold-liquid-soft/[0.12] px-2.5 py-1.5 text-[11px] font-medium text-gold-300"
-            >
-              <ShieldCheck size={13} strokeWidth={2.4} />
-              Admin
-            </button>
-          )}
+          <div className="flex shrink-0 items-center gap-2">
+            <RefreshButton
+              onClick={refreshArticles}
+              isRefreshing={isRefreshing}
+              isRateLimited={isRateLimited}
+              cooldownSecondsLeft={cooldownSecondsLeft}
+            />
+            {isAdmin && (
+              <button
+                onClick={() => {
+                  if (window.confirm("Exit admin mode?")) logout();
+                }}
+                title="Admin mode, tap to exit"
+                className="mt-0.5 flex shrink-0 items-center gap-1.5 rounded-full border border-gold-600/50 bg-gold-liquid-soft/[0.12] px-2.5 py-1.5 text-[11px] font-medium text-gold-300"
+              >
+                <ShieldCheck size={13} strokeWidth={2.4} />
+                Admin
+              </button>
+            )}
+          </div>
         </div>
         <p className="mt-1.5 text-xs tracking-wide text-ink-400">
-           Archived Articles.
+          Archives — council projects, updates, and how things are moving.
         </p>
       </header>
 
