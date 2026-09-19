@@ -61,20 +61,16 @@ export function HeroCard({
         href="/budget"
         className="group mt-4 block rounded-2xl bg-ink-900 p-5 shadow-gold transition-transform active:scale-[0.99]"
       >
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-gold-300">
-          Budget Status
-        </p>
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-gold-300">Budget</p>
         <p
           className={`mt-1.5 font-display text-3xl font-bold leading-tight ${
             isSurplus ? "text-gold-200" : "text-blood-400"
           }`}
         >
-          {PESO.format(Math.abs(remaining))}
+          {PESO.format(remaining)}
         </p>
-        <p className="mt-1 text-[13px] text-ink-400">
-          {isSurplus
-            ? "Surplus remaining across all funds"
-            : "Over budget — spending exceeds funds received"}
+        <p className="mt-1 text-[13px] font-semibold text-ink-400">
+          {isSurplus ? "Surplus" : "Deficit"}
         </p>
       </Link>
     );
