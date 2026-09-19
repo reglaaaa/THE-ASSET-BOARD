@@ -8,10 +8,10 @@ import {
   Lock,
   Pencil,
   Plus,
+  Scale,
   ShieldCheck,
   Trash2,
   TrendingDown,
-  TriangleAlert,
   X
 } from "lucide-react";
 import {
@@ -68,51 +68,62 @@ type TableName = "budget_sources" | "expenses" | "projects";
 const inputClass =
   "rounded-lg border border-ink-600 bg-ink-900 px-3 py-2 text-sm text-[#f2ecdb] placeholder:text-ink-400 focus:border-gold-500 focus:outline-none";
 
-function ExpandCard({
+// ---------------------------------------------------------------------
+// Simple stat card — icon, big number, bold label, muted sublabel.
+// Optionally expandable (tap to reveal a detail list below).
+// ---------------------------------------------------------------------
+function StatCard({
   icon,
-  title,
-  subtitle,
+  accent = "gold",
+  value,
+  label,
+  sublabel,
   open,
   onToggle,
-  accent = "gold",
   children
 }: {
   icon: React.ReactNode;
-  title: string;
-  subtitle: string;
-  open: boolean;
-  onToggle: () => void;
   accent?: "gold" | "blood";
-  children: React.ReactNode;
+  value: string;
+  label: string;
+  sublabel: string;
+  open?: boolean;
+  onToggle?: () => void;
+  children?: React.ReactNode;
 }) {
+  const tint =
+    accent === "gold"
+      ? { bg: "bg-gold-500/15", text: "text-gold-300" }
+      : { bg: "bg-blood-600/15", text: "text-blood-400" };
+
+  const expandable = typeof onToggle === "function";
+
   return (
-    <div className="overflow-hidden rounded-xl border border-ink-600 bg-ink-800/60">
+    <div className="overflow-hidden rounded-2xl border border-ink-700 bg-ink-800/60">
       <button
         onClick={onToggle}
-        className="flex w-full items-center justify-between gap-3 p-4 text-left"
+        disabled={!expandable}
+        className="flex w-full flex-col items-start gap-3 p-5 text-left disabled:cursor-default"
       >
-        <div className="flex items-center gap-3">
-          <div
-            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border ${
-              accent === "gold"
-                ? "border-gold-600/40 text-gold-300"
-                : "border-blood-600/40 text-blood-400"
-            }`}
-          >
+        <div className="flex w-full items-start justify-between">
+          <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${tint.bg} ${tint.text}`}>
             {icon}
           </div>
-          <div>
-            <p className="font-display text-sm font-bold text-[#f2ecdb]">{title}</p>
-            <p className="text-xs text-ink-400">{subtitle}</p>
-          </div>
+          {expandable && (
+            <ChevronDown
+              size={18}
+              strokeWidth={2.2}
+              className={`mt-1 shrink-0 text-ink-400 transition-transform ${open ? "rotate-180" : ""}`}
+            />
+          )}
         </div>
-        <ChevronDown
-          size={16}
-          strokeWidth={2.2}
-          className={`shrink-0 text-ink-400 transition-transform ${open ? "rotate-180" : ""}`}
-        />
+        <p className={`font-display text-3xl font-bold ${tint.text}`}>{value}</p>
+        <div>
+          <p className="text-sm font-bold text-[#f2ecdb]">{label}</p>
+          <p className="text-xs text-ink-400">{sublabel}</p>
+        </div>
       </button>
-      {open && <div className="border-t border-ink-600 p-4">{children}</div>}
+      {expandable && open && <div className="border-t border-ink-700 p-4">{children}</div>}
     </div>
   );
 }
@@ -455,7 +466,7 @@ function SourcesSection({
 }
 
 // ---------------------------------------------------------------------
-// Expenses (money out)
+// Other spending (money out, not tied to a project)
 // ---------------------------------------------------------------------
 function ExpensesSection({
   expenses,
@@ -535,24 +546,19 @@ function ExpensesSection({
     if (err) alert(err);
   }
 
-  if (expenses.length === 0 && !adminMode) {
-    return (
-      <EmptyState
-        icon={<TrendingDown size={18} strokeWidth={2} />}
-        message="No expenses recorded yet."
-        className="py-4"
-      />
-    );
-  }
-
   return (
     <div className="flex flex-col gap-2">
-      {expenses.length > 0 && (
-        <div className="grid grid-cols-[1fr_auto_auto] gap-2 px-1 text-[11px] uppercase tracking-wide text-ink-400">
-          <span>Item / Purpose</span>
-          <span className="text-right">Amount</span>
-          <span className="text-right">Date</span>
-        </div>
+      <div className="flex items-center gap-1.5 text-xs font-semibold text-ink-400">
+        <TrendingDown size={13} strokeWidth={2.2} />
+        Other spending — not tied to a project
+      </div>
+
+      {expenses.length === 0 && !adminMode && (
+        <EmptyState
+          icon={<TrendingDown size={18} strokeWidth={2} />}
+          message="No other spending recorded."
+          className="py-3"
+        />
       )}
 
       {expenses.map((e) =>
@@ -683,12 +689,14 @@ function ExpensesSection({
 // ---------------------------------------------------------------------
 function ProjectsSection({
   projects,
+  expenses,
   adminMode,
   unlockedPassword,
   onWrongPassword,
   onChanged
 }: {
   projects: Project[];
+  expenses: Expense[];
   adminMode: boolean;
   unlockedPassword: string | null;
   onWrongPassword: () => void;
@@ -967,6 +975,16 @@ function ProjectsSection({
             Add project
           </button>
         ))}
+
+      <div className="my-4 border-t border-ink-700" />
+
+      <ExpensesSection
+        expenses={expenses}
+        adminMode={adminMode}
+        unlockedPassword={unlockedPassword}
+        onWrongPassword={onWrongPassword}
+        onChanged={onChanged}
+      />
     </>
   );
 }
@@ -978,8 +996,7 @@ export default function BudgetPage() {
   const [loading, setLoading] = useState(true);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null);
 
-  const [budgetOpen, setBudgetOpen] = useState(false);
-  const [spendingOpen, setSpendingOpen] = useState(false);
+  const [sourcesOpen, setSourcesOpen] = useState(false);
   const [projectsOpen, setProjectsOpen] = useState(false);
 
   const { isAdmin: adminMode, password: unlockedPassword, login, logout } = useAdmin();
@@ -1009,9 +1026,19 @@ export default function BudgetPage() {
     setLoading(false);
   }
 
+  // Everything below is derived — nothing here is entered by hand.
   const totalBudget = useMemo(() => sources.reduce((sum, s) => sum + Number(s.amount), 0), [sources]);
-  const totalSpending = useMemo(() => expenses.reduce((sum, e) => sum + Number(e.amount), 0), [expenses]);
-  const deficit = totalSpending - totalBudget;
+  const totalProjectsBudget = useMemo(
+    () => projects.reduce((sum, p) => sum + Number(p.budget_used), 0),
+    [projects]
+  );
+  const totalOtherSpending = useMemo(
+    () => expenses.reduce((sum, e) => sum + Number(e.amount), 0),
+    [expenses]
+  );
+  const totalUsed = totalProjectsBudget + totalOtherSpending;
+  const surplus = totalBudget - totalUsed;
+  const isDeficit = surplus < 0;
 
   return (
     <main className="mx-auto flex min-h-screen max-w-xl flex-col px-4 pb-24">
@@ -1057,13 +1084,23 @@ export default function BudgetPage() {
             onLock={logout}
           />
 
-          {/* 1. Total Yearly Budget */}
-          <ExpandCard
-            icon={<Coins size={16} strokeWidth={2.2} />}
-            title="Total Yearly Budget"
-            subtitle={money(totalBudget)}
-            open={budgetOpen}
-            onToggle={() => setBudgetOpen((v) => !v)}
+          {/* 1. Surplus / deficit — auto-calculated, sources minus all spending */}
+          <StatCard
+            icon={<Scale size={20} strokeWidth={2.2} />}
+            accent={isDeficit ? "blood" : "gold"}
+            value={money(surplus)}
+            label={isDeficit ? "Deficit" : "Surplus"}
+            sublabel={`${money(totalBudget)} in, ${money(totalUsed)} out`}
+          />
+
+          {/* 2. Budget sources */}
+          <StatCard
+            icon={<Coins size={20} strokeWidth={2.2} />}
+            value={money(totalBudget)}
+            label="Budget Sources"
+            sublabel={`${sources.length} source${sources.length === 1 ? "" : "s"}`}
+            open={sourcesOpen}
+            onToggle={() => setSourcesOpen((v) => !v)}
           >
             <SourcesSection
               sources={sources}
@@ -1072,73 +1109,27 @@ export default function BudgetPage() {
               onWrongPassword={logout}
               onChanged={load}
             />
-          </ExpandCard>
+          </StatCard>
 
-          {/* 2. Total Yearly Spending */}
-          <ExpandCard
-            icon={<TrendingDown size={16} strokeWidth={2.2} />}
-            title="Total Yearly Spending"
-            subtitle={money(totalSpending)}
-            open={spendingOpen}
-            onToggle={() => setSpendingOpen((v) => !v)}
+          {/* 3. Projects (+ other spending, nested) */}
+          <StatCard
+            icon={<FolderKanban size={20} strokeWidth={2.2} />}
+            accent="blood"
+            value={money(-totalUsed)}
+            label="Projects"
+            sublabel={`${projects.length} project${projects.length === 1 ? "" : "s"}, ${expenses.length} other`}
+            open={projectsOpen}
+            onToggle={() => setProjectsOpen((v) => !v)}
           >
-            <ExpensesSection
+            <ProjectsSection
+              projects={projects}
               expenses={expenses}
               adminMode={adminMode}
               unlockedPassword={unlockedPassword}
               onWrongPassword={logout}
               onChanged={load}
             />
-          </ExpandCard>
-
-          {/* 3. Budget Deficit — static, non-clickable */}
-          <div
-            className={`rounded-xl border p-4 ${
-              deficit > 0
-                ? "border-blood-600/60 bg-blood-700/[0.08] shadow-blood"
-                : "border-gold-600/40 bg-ink-800/60"
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <div
-                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border ${
-                  deficit > 0 ? "border-blood-600/50 text-blood-400" : "border-gold-600/40 text-gold-300"
-                }`}
-              >
-                <TriangleAlert size={16} strokeWidth={2.2} />
-              </div>
-              <div>
-                <p className="font-display text-sm font-bold text-[#f2ecdb]">
-                  {deficit > 0 ? "Budget Deficit" : "Budget Surplus"}
-                </p>
-                <p className="text-xs text-ink-400">Total spending minus total budget</p>
-              </div>
-            </div>
-            <p
-              className={`mt-3 font-display text-2xl font-bold ${
-                deficit > 0 ? "text-blood-400" : "text-gold-liquid"
-              }`}
-            >
-              {deficit > 0 ? money(deficit) : money(Math.abs(deficit))}
-            </p>
-          </div>
-
-          {/* 4. Projects */}
-          <ExpandCard
-            icon={<FolderKanban size={16} strokeWidth={2.2} />}
-            title="Projects"
-            subtitle={`${projects.length} total`}
-            open={projectsOpen}
-            onToggle={() => setProjectsOpen((v) => !v)}
-          >
-            <ProjectsSection
-              projects={projects}
-              adminMode={adminMode}
-              unlockedPassword={unlockedPassword}
-              onWrongPassword={logout}
-              onChanged={load}
-            />
-          </ExpandCard>
+          </StatCard>
         </section>
       )}
     </main>
