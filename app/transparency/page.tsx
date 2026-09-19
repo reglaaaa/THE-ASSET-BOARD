@@ -6,12 +6,13 @@ import { supabase, type Article } from "@/lib/supabaseClient";
 import { useAdmin } from "@/lib/useAdmin";
 import { Logo } from "@/components/Logo";
 import { EmptyState } from "@/components/EmptyState";
-import { RefreshButton } from "@/components/RefreshButton";
+import { RefreshStatus } from "@/components/RefreshStatus";
 import { useRateLimitedRefresh } from "@/lib/useRateLimitedRefresh";
 
 export default function TransparencyPage() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null);
 
   const { isAdmin, password: adminPassword, login, logout } = useAdmin();
 
@@ -40,7 +41,10 @@ export default function TransparencyPage() {
       .from("articles")
       .select("*")
       .order("created_at", { ascending: false });
-    if (!error && data) setArticles(data as Article[]);
+    if (!error && data) {
+      setArticles(data as Article[]);
+      setLastUpdatedAt(Date.now());
+    }
     setLoading(false);
   }
 
@@ -107,12 +111,13 @@ export default function TransparencyPage() {
       <header className="sticky top-0 z-10 -mx-4 border-b border-ink-700 bg-ink-950/85 px-4 pb-3 pt-5 backdrop-blur">
         <div className="flex items-start justify-between gap-3">
           <Logo />
-          <div className="flex shrink-0 items-center gap-2">
-            <RefreshButton
+          <div className="flex shrink-0 items-center gap-3">
+            <RefreshStatus
               onClick={refreshArticles}
               isRefreshing={isRefreshing}
               isRateLimited={isRateLimited}
               cooldownSecondsLeft={cooldownSecondsLeft}
+              lastUpdatedAt={lastUpdatedAt}
             />
             {isAdmin && (
               <button
