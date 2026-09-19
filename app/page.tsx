@@ -64,10 +64,11 @@ export default function Home() {
   // randomly features one of them in the hero slot (50/50). Falls back
   // to whichever one actually has data if only one does.
   async function loadHero() {
-    const [articleRes, sourcesRes, expensesRes] = await Promise.all([
+    const [articleRes, sourcesRes, expensesRes, projectsRes] = await Promise.all([
       supabase.from("articles").select("*").order("created_at", { ascending: false }).limit(1),
       supabase.from("budget_sources").select("amount"),
-      supabase.from("expenses").select("amount")
+      supabase.from("expenses").select("amount"),
+      supabase.from("projects").select("budget_used")
     ]);
 
     const article =
@@ -77,9 +78,18 @@ export default function Home() {
     setLatestArticle(article);
 
     let summary: BudgetSummary | null = null;
-    if (!sourcesRes.error && !expensesRes.error && sourcesRes.data && expensesRes.data) {
+    if (
+      !sourcesRes.error &&
+      !expensesRes.error &&
+      !projectsRes.error &&
+      sourcesRes.data &&
+      expensesRes.data &&
+      projectsRes.data
+    ) {
       const totalBudget = sourcesRes.data.reduce((sum, r) => sum + Number(r.amount), 0);
-      const totalSpending = expensesRes.data.reduce((sum, r) => sum + Number(r.amount), 0);
+      const totalSpending =
+        expensesRes.data.reduce((sum, r) => sum + Number(r.amount), 0) +
+        projectsRes.data.reduce((sum, r) => sum + Number(r.budget_used), 0);
       summary = { totalBudget, totalSpending };
       setBudgetSummary(summary);
     }
