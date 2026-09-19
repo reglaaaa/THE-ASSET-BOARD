@@ -1,6 +1,6 @@
 "use client";
 
-import { RefreshCw } from "lucide-react";
+import { RotateCw } from "lucide-react";
 import { useRateLimitedRefresh } from "@/lib/useRateLimitedRefresh";
 
 /**
