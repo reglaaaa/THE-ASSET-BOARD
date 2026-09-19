@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ChevronRight, Clock, Inbox, Lock, ShieldCheck, TrendingUp } from "lucide-react";
 import { supabase, type Post, type Category, type Article } from "@/lib/supabaseClient";
@@ -15,6 +15,8 @@ import { BottomSheet } from "@/components/BottomSheet";
 import { EmptyState } from "@/components/EmptyState";
 import { FeedSkeleton } from "@/components/skeletons/PostCardSkeleton";
 import { PullToRefresh } from "@/components/PullToRefresh";
+import { RefreshButton } from "@/components/RefreshButton";
+import { useRateLimitedRefresh } from "@/lib/useRateLimitedRefresh";
 
 type Sort = "new" | "top";
 
@@ -33,35 +35,24 @@ export default function Home() {
   const [adminSubmitting, setAdminSubmitting] = useState(false);
   const [adminError, setAdminError] = useState<string | null>(null);
 
-  // Always points at the latest loadPosts closure (current isAdmin /
-  // adminPassword), so the realtime subscription below — set up once on
-  // mount — never calls a stale, pre-login version of it.
-  const loadPostsRef = useRef<() => Promise<void>>();
-  useEffect(() => {
-    loadPostsRef.current = loadPosts;
-  });
-
   useEffect(() => {
     setLiked(getLikedSet());
     loadLatestArticle();
-
-    // Live updates: new posts and like-count changes appear without a refresh
-    const channel = supabase
-      .channel("posts-feed")
-      .on("postgres_changes", { event: "*", schema: "public", table: "posts" }, () => {
-        loadPostsRef.current?.();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Manual refresh only — no realtime subscription. Shared cooldown between
+  // the refresh button and the pull-to-refresh gesture so neither can be
+  // used to bypass the other's rate limit.
+  const {
+    refresh: refreshPosts,
+    isRefreshing,
+    isRateLimited,
+    cooldownSecondsLeft
+  } = useRateLimitedRefresh(loadPosts);
 
   // Reload with the admin (or public) query whenever admin status changes —
   // covers the initial load and immediately picks up SSC-only posts right
-  // after logging in, instead of waiting for the next realtime event.
+  // after logging in.
   useEffect(() => {
     loadPosts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -230,27 +221,35 @@ export default function Home() {
 
         <div className="mt-4 flex items-center justify-between gap-3">
           <CategoryFilter active={filter} onChange={setFilter} />
-          <div className="flex shrink-0 items-center gap-1 rounded-full border border-ink-600 p-0.5">
-            <button
-              title="Newest"
-              aria-pressed={sort === "new"}
-              onClick={() => setSort("new")}
-              className={`flex h-7 w-7 items-center justify-center rounded-full transition-colors ${
-                sort === "new" ? "bg-gold-liquid-soft text-ink-950" : "text-ink-400"
-              }`}
-            >
-              <Clock size={13} strokeWidth={2.2} />
-            </button>
-            <button
-              title="Top"
-              aria-pressed={sort === "top"}
-              onClick={() => setSort("top")}
-              className={`flex h-7 w-7 items-center justify-center rounded-full transition-colors ${
-                sort === "top" ? "bg-gold-liquid-soft text-ink-950" : "text-ink-400"
-              }`}
-            >
-              <TrendingUp size={13} strokeWidth={2.2} />
-            </button>
+          <div className="flex shrink-0 items-center gap-2">
+            <RefreshButton
+              onClick={refreshPosts}
+              isRefreshing={isRefreshing}
+              isRateLimited={isRateLimited}
+              cooldownSecondsLeft={cooldownSecondsLeft}
+            />
+            <div className="flex shrink-0 items-center gap-1 rounded-full border border-ink-600 p-0.5">
+              <button
+                title="Newest"
+                aria-pressed={sort === "new"}
+                onClick={() => setSort("new")}
+                className={`flex h-7 w-7 items-center justify-center rounded-full transition-colors ${
+                  sort === "new" ? "bg-gold-liquid-soft text-ink-950" : "text-ink-400"
+                }`}
+              >
+                <Clock size={13} strokeWidth={2.2} />
+              </button>
+              <button
+                title="Top"
+                aria-pressed={sort === "top"}
+                onClick={() => setSort("top")}
+                className={`flex h-7 w-7 items-center justify-center rounded-full transition-colors ${
+                  sort === "top" ? "bg-gold-liquid-soft text-ink-950" : "text-ink-400"
+                }`}
+              >
+                <TrendingUp size={13} strokeWidth={2.2} />
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -284,7 +283,7 @@ export default function Home() {
         </Link>
       )}
 
-      <PullToRefresh onRefresh={loadPosts}>
+      <PullToRefresh onRefresh={refreshPosts} disabled={isRateLimited}>
         <section className="mt-4 flex flex-col gap-2.5">
           {loading && <FeedSkeleton />}
 
