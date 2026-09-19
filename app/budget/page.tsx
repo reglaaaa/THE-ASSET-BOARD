@@ -25,6 +25,8 @@ import { useAdmin } from "@/lib/useAdmin";
 import { Logo } from "@/components/Logo";
 import { EmptyState } from "@/components/EmptyState";
 import { BudgetSkeleton } from "@/components/skeletons/BudgetSkeleton";
+import { RefreshButton } from "@/components/RefreshButton";
+import { useRateLimitedRefresh } from "@/lib/useRateLimitedRefresh";
 
 const PESO = new Intl.NumberFormat("en-PH", {
   style: "currency",
@@ -983,18 +985,15 @@ export default function BudgetPage() {
 
   useEffect(() => {
     load();
-
-    const channel = supabase
-      .channel("budget-dashboard")
-      .on("postgres_changes", { event: "*", schema: "public", table: "budget_sources" }, load)
-      .on("postgres_changes", { event: "*", schema: "public", table: "expenses" }, load)
-      .on("postgres_changes", { event: "*", schema: "public", table: "projects" }, load)
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, []);
+
+  // Manual refresh only — no realtime subscription.
+  const {
+    refresh: refreshBudget,
+    isRefreshing,
+    isRateLimited,
+    cooldownSecondsLeft
+  } = useRateLimitedRefresh(load);
 
   async function load() {
     const [s, e, p] = await Promise.all([
@@ -1017,18 +1016,26 @@ export default function BudgetPage() {
       <header className="sticky top-0 z-10 -mx-4 border-b border-ink-700 bg-ink-950/85 px-4 pb-3 pt-5 backdrop-blur">
         <div className="flex items-start justify-between gap-3">
           <Logo />
-          {adminMode && (
-            <button
-              onClick={() => {
-                if (window.confirm("Exit admin mode?")) logout();
-              }}
-              title="Admin mode, tap to exit"
-              className="mt-0.5 flex shrink-0 items-center gap-1.5 rounded-full border border-gold-600/50 bg-gold-liquid-soft/[0.12] px-2.5 py-1.5 text-[11px] font-medium text-gold-300"
-            >
-              <ShieldCheck size={13} strokeWidth={2.4} />
-              Admin
-            </button>
-          )}
+          <div className="flex shrink-0 items-center gap-2">
+            <RefreshButton
+              onClick={refreshBudget}
+              isRefreshing={isRefreshing}
+              isRateLimited={isRateLimited}
+              cooldownSecondsLeft={cooldownSecondsLeft}
+            />
+            {adminMode && (
+              <button
+                onClick={() => {
+                  if (window.confirm("Exit admin mode?")) logout();
+                }}
+                title="Admin mode, tap to exit"
+                className="mt-0.5 flex shrink-0 items-center gap-1.5 rounded-full border border-gold-600/50 bg-gold-liquid-soft/[0.12] px-2.5 py-1.5 text-[11px] font-medium text-gold-300"
+              >
+                <ShieldCheck size={13} strokeWidth={2.4} />
+                Admin
+              </button>
+            )}
+          </div>
         </div>
         <p className="mt-1.5 text-xs tracking-wide text-ink-400">
           Budget Dashboard — where the money comes from, where it goes.
