@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Inbox, Lock, ShieldCheck } from "lucide-react";
 import { supabase, type Post, type Category, type Article } from "@/lib/supabaseClient";
+import { fetchTotals } from "@/lib/budgetData";
 import { getAnonId, getLikedSet, persistLiked, recordPost } from "@/lib/anonId";
 import { useAdmin } from "@/lib/useAdmin";
 import { Logo } from "@/components/Logo";
@@ -64,11 +65,9 @@ export default function Home() {
   // randomly features one of them in the hero slot (50/50). Falls back
   // to whichever one actually has data if only one does.
   async function loadHero() {
-    const [articleRes, sourcesRes, expensesRes, projectsRes] = await Promise.all([
+    const [articleRes, totalsRes] = await Promise.all([
       supabase.from("articles").select("*").order("created_at", { ascending: false }).limit(1),
-      supabase.from("budget_sources").select("amount"),
-      supabase.from("expenses").select("amount"),
-      supabase.from("projects").select("budget_used")
+      fetchTotals().catch(() => null)
     ]);
 
     const article =
@@ -78,19 +77,11 @@ export default function Home() {
     setLatestArticle(article);
 
     let summary: BudgetSummary | null = null;
-    if (
-      !sourcesRes.error &&
-      !expensesRes.error &&
-      !projectsRes.error &&
-      sourcesRes.data &&
-      expensesRes.data &&
-      projectsRes.data
-    ) {
-      const totalBudget = sourcesRes.data.reduce((sum, r) => sum + Number(r.amount), 0);
-      const totalSpending =
-        expensesRes.data.reduce((sum, r) => sum + Number(r.amount), 0) +
-        projectsRes.data.reduce((sum, r) => sum + Number(r.budget_used), 0);
-      summary = { totalBudget, totalSpending };
+    if (totalsRes) {
+      summary = {
+        totalBudget: totalsRes.totalBudget,
+        totalSpending: totalsRes.totalProjectsBudget + totalsRes.totalOtherSpending
+      };
       setBudgetSummary(summary);
     }
 
