@@ -29,10 +29,9 @@ export function RefreshButton({
       disabled={disabled}
       title={isRateLimited ? `Wait ${cooldownSecondsLeft}s to refresh again` : "Refresh"}
       aria-label="Refresh"
-      className="flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-ink-600 px-2.5 text-[11px] font-medium text-ink-400 transition-colors hover:border-gold-600/50 hover:text-gold-300 disabled:cursor-not-allowed disabled:opacity-40"
+      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-ink-600 text-ink-400 transition-colors hover:border-gold-600/50 hover:text-gold-300 disabled:cursor-not-allowed disabled:opacity-40"
     >
-      <RefreshCw size={13} strokeWidth={2.2} className={isRefreshing ? "animate-spin" : ""} />
-      {isRateLimited ? `${cooldownSecondsLeft}s` : "Refresh"}
+      <RefreshCw size={14} strokeWidth={2.2} className={isRefreshing ? "animate-spin" : ""} />
     </button>
   );
 }
