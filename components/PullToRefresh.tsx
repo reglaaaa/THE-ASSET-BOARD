@@ -8,9 +8,14 @@ const MAX_PULL = 96;
 
 export function PullToRefresh({
   onRefresh,
+  disabled = false,
   children
 }: {
   onRefresh: () => Promise<void>;
+  // When true (e.g. the shared refresh cooldown is active), the pull
+  // gesture is ignored so it can't bypass the same rate limit the
+  // refresh button enforces.
+  disabled?: boolean;
   children: React.ReactNode;
 }) {
   const [pull, setPull] = useState(0);
@@ -19,7 +24,7 @@ export function PullToRefresh({
   const tracking = useRef(false);
 
   function onTouchStart(e: React.TouchEvent) {
-    if (refreshing) return;
+    if (refreshing || disabled) return;
     // Only start tracking a pull if the page is already scrolled to the top —
     // otherwise this is just a normal scroll gesture.
     if (window.scrollY <= 0) {
