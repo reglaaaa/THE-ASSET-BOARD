@@ -3,6 +3,7 @@ import { Space_Grotesk, Inter } from "next/font/google";
 import "./globals.css";
 import { Footer } from "@/components/Footer";
 import { TabBar } from "@/components/TabBar";
+import { ConsentGate } from "@/components/ConsentGate";
 
 const display = Space_Grotesk({
   subsets: ["latin"],
@@ -34,6 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Footer />
         </div>
         <TabBar />
+        <ConsentGate />
       </body>
     </html>
   );
