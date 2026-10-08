@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Mail } from "lucide-react";
 import { Logo } from "./Logo";
 
@@ -24,6 +25,15 @@ export function Footer() {
             <Mail size={13} strokeWidth={2.2} />
             26-32070@g.batstate-u.edu.ph (Executive PRO II)
           </a>
+        </div>
+
+        <div className="flex gap-4 text-xs">
+          <Link href="/terms" className="text-ink-400 hover:text-gold-300">
+            Terms and Conditions
+          </Link>
+          <Link href="/privacy" className="text-ink-400 hover:text-gold-300">
+            Privacy Policy
+          </Link>
         </div>
 
         <p className="text-[11px] text-ink-400/70">
