@@ -248,7 +248,7 @@ export default function Home() {
           )}
         </div>
         <p className="mt-1.5 text-xs tracking-wide text-ink-400">
-          Engineered to Serve. United to Lead.
+          Your voice engineered into action.
         </p>
 
         <div className="mt-4 flex items-center justify-between gap-3">

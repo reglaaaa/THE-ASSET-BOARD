@@ -19,7 +19,7 @@ const body = Inter({
 export const metadata: Metadata = {
   title: "THE ASSET — Anonymous Student Feedback",
   description:
-    "Engineered to Serve. United to Lead. Post concerns anonymously, get them seen.",
+    "Your voice engineered into action. Post concerns anonymously, get them seen.",
   icons: {
     icon: "/favicon.png"
   }
