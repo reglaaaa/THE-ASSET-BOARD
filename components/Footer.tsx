@@ -13,7 +13,7 @@ export function Footer() {
           Official platform of the Batangas State University — LIMA Campus
           Supreme Student Council.
           <br />
-          Engineered to Serve. United to Lead.
+          Your voice engineered into action.
         </p>
 
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-ink-400">
