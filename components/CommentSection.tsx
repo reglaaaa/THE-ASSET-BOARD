@@ -84,14 +84,23 @@ export function CommentSection({
     setPosting(true);
     setError(null);
 
-    const { data, error } = await supabase.rpc("create_comment", {
-      p_post_id: postId,
-      p_content: content,
-      p_anon_id: getAnonId()
-    });
+    let data: Comment | null = null;
+    let errMsg: string | null = null;
+    try {
+      const res = await fetch("/api/submit/comment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ post_id: postId, content, anon_id: getAnonId() })
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) errMsg = json.error || "Couldn't post that comment — please try again.";
+      else data = json.comment as Comment;
+    } catch {
+      errMsg = "Network error — please try again.";
+    }
 
-    if (error) {
-      setError(error.message || "Couldn't post that comment — please try again.");
+    if (errMsg || !data) {
+      setError(errMsg || "Couldn't post that comment — please try again.");
     } else {
       recordComment();
       setComments((prev) => [...prev, data as Comment]);
