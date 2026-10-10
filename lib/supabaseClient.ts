@@ -12,6 +12,12 @@ if (!url || !anonKey) {
 
 export const supabase = createClient(url, anonKey);
 
+// Explicit column lists. The public (anon) key is only allowed to read these
+// columns (see supabase_lockdown.sql), so never use select("*") on these tables.
+export const POST_COLUMNS =
+  "id, content, category, is_urgent, status, likes_count, comments_count, created_at, visibility";
+export const COMMENT_COLUMNS = "id, post_id, content, created_at, is_official";
+
 export type Category = "concern" | "suggestion";
 
 export type PostStatus = "investigating" | "executing" | "resolved" | "denied";
