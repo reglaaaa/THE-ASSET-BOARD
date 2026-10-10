@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { checkPassword, getClientIp, withinRateLimit } from "@/lib/adminAuth";
 
 function isValidImageUrl(url: string) {
   try {
@@ -7,40 +8,6 @@ function isValidImageUrl(url: string) {
     return u.protocol === "http:" || u.protocol === "https:";
   } catch {
     return false;
-  }
-}
-
-function checkPassword(password: unknown) {
-  const expected = process.env.ADMIN_PASSWORD;
-  return typeof expected === "string" && expected.length > 0 && password === expected;
-}
-
-function getClientIp(req: NextRequest) {
-  const fwd = req.headers.get("x-forwarded-for");
-  if (fwd) return fwd.split(",")[0].trim();
-  return req.headers.get("x-real-ip") ?? "unknown";
-}
-
-// Basic brute-force protection: at most 5 admin-password attempts per
-// minute per IP, enforced in Postgres (shared with the rest of the app's
-// rate limiting) so it can't be bypassed by hitting this route directly.
-// Fails open (allows the request) if the check itself errors, so an
-// infra hiccup on the rate limiter can't lock admins out entirely.
-async function withinRateLimit(ip: string) {
-  try {
-    const { data, error } = await supabaseAdmin().rpc("check_rate_limit", {
-      p_key: `admin-auth:${ip}`,
-      p_max_hits: 5,
-      p_window_seconds: 60
-    });
-    if (error) {
-      console.error("Rate limit check failed:", error.message);
-      return true;
-    }
-    return data === true;
-  } catch (err) {
-    console.error("Rate limit check threw:", err);
-    return true;
   }
 }
 
