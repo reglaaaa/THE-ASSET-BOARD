@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Inbox, Lock, ShieldCheck } from "lucide-react";
-import { supabase, type Post, type Category, type Article } from "@/lib/supabaseClient";
+import { supabase, POST_COLUMNS, type Post, type Category, type Article } from "@/lib/supabaseClient";
 import { fetchTotals } from "@/lib/budgetData";
 import { getAnonId, getLikedSet, persistLiked, recordPost } from "@/lib/anonId";
 import { useAdmin } from "@/lib/useAdmin";
@@ -111,7 +111,7 @@ export default function Home() {
     }
     const { data, error } = await supabase
       .from("posts")
-      .select("*")
+      .select(POST_COLUMNS)
       .order("created_at", { ascending: false });
     if (!error && data) {
       setPosts(data as Post[]);
@@ -161,9 +161,11 @@ export default function Home() {
     setLiked(next);
     persistLiked(next);
 
-    const { error } = isLiked
-      ? await supabase.from("likes").delete().eq("post_id", postId).eq("anon_id", anonId)
-      : await supabase.from("likes").insert({ post_id: postId, anon_id: anonId });
+    const { error } = await supabase.rpc("toggle_like", {
+      p_post_id: postId,
+      p_anon_id: anonId,
+      p_like: !isLiked
+    });
 
     if (error) {
       // Roll back the optimistic change — the write didn't actually happen
