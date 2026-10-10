@@ -135,7 +135,7 @@ export function PostCard({
 
   return (
     <article
-      className={`py-4 transition-colors ${
+      className={`min-w-0 py-4 transition-colors ${
         post.visibility === "ssc_only" ? "rounded-lg border border-dashed border-ink-500/50 bg-ink-800/30 px-3" : ""
       }`}
     >
@@ -278,7 +278,7 @@ export function PostCard({
           </div>
         </div>
       ) : (
-        <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-[#f2ecdb]/90">
+        <p className="whitespace-pre-wrap break-words text-[15px] leading-relaxed text-[#f2ecdb]/90">
           {post.content}
         </p>
       )}

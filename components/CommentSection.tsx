@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { MessageCircle, Send, ShieldCheck, Trash2 } from "lucide-react";
-import { supabase, type Comment } from "@/lib/supabaseClient";
+import { supabase, COMMENT_COLUMNS, type Comment } from "@/lib/supabaseClient";
 import { getAnonId, recentCommentCount, recordComment } from "@/lib/anonId";
 
 // Warn once someone is about to send their 3rd comment within this window.
@@ -59,7 +59,7 @@ export function CommentSection({
       setLoading(true);
       const { data, error } = await supabase
         .from("comments")
-        .select("*")
+        .select(COMMENT_COLUMNS)
         .eq("post_id", postId)
         .order("created_at", { ascending: true });
       if (!error && data) setComments(data as Comment[]);
@@ -191,7 +191,7 @@ export function CommentSection({
                     </button>
                   )}
                 </div>
-                <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-[#f2ecdb]/95">
+                <p className="whitespace-pre-wrap break-words text-[13px] leading-relaxed text-[#f2ecdb]/95">
                   {c.content}
                 </p>
                 <p className="mt-1 text-[10px] text-ink-400">{timeAgo(c.created_at)}</p>
@@ -199,7 +199,7 @@ export function CommentSection({
             ) : (
               <div key={c.id} className="rounded-lg bg-ink-900/60 px-3 py-2">
                 <div className="flex items-start justify-between gap-2">
-                  <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-[#f2ecdb]/85">
+                  <p className="whitespace-pre-wrap break-words text-[13px] leading-relaxed text-[#f2ecdb]/85">
                     {c.content}
                   </p>
                   {isAdmin && (
