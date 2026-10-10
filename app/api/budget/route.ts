@@ -1,42 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { checkPassword, getClientIp, withinRateLimit } from "@/lib/adminAuth";
 
 type TableName = "budget_sources" | "expenses" | "projects";
 const TABLES: TableName[] = ["budget_sources", "expenses", "projects"];
 
 const PROJECT_STATUSES = ["planning", "executing", "cancelled", "executed"];
-
-function checkPassword(password: unknown) {
-  const expected = process.env.ADMIN_PASSWORD;
-  return typeof expected === "string" && expected.length > 0 && password === expected;
-}
-
-function getClientIp(req: NextRequest) {
-  const fwd = req.headers.get("x-forwarded-for");
-  if (fwd) return fwd.split(",")[0].trim();
-  return req.headers.get("x-real-ip") ?? "unknown";
-}
-
-// Same Postgres-backed rate limit used by /api/articles: at most 5
-// admin-password attempts per minute per IP. Fails open on infra errors
-// so a hiccup here can't lock admins out.
-async function withinRateLimit(ip: string) {
-  try {
-    const { data, error } = await supabaseAdmin().rpc("check_rate_limit", {
-      p_key: `admin-auth:${ip}`,
-      p_max_hits: 5,
-      p_window_seconds: 60
-    });
-    if (error) {
-      console.error("Rate limit check failed:", error.message);
-      return true;
-    }
-    return data === true;
-  } catch (err) {
-    console.error("Rate limit check threw:", err);
-    return true;
-  }
-}
 
 function isValidDate(d: unknown) {
   return typeof d === "string" && !isNaN(new Date(d).getTime());
