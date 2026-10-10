@@ -97,7 +97,7 @@ export default function Home() {
     if (isAdmin && adminPassword) {
       // Admin sees everything, including SSC-only posts.
       try {
-        const res = await fetch(`/api/posts?password=${encodeURIComponent(adminPassword)}`);
+        const res = await fetch("/api/posts", { headers: { "x-admin-password": adminPassword } });
         const json = await res.json().catch(() => ({}));
         if (res.ok && json.posts) {
           setPosts(json.posts as Post[]);
@@ -126,15 +126,28 @@ export default function Home() {
     urgent: boolean,
     visibility: "public" | "ssc_only"
   ) {
-    const { error } = await supabase.rpc("create_post", {
-      p_content: content,
-      p_category: category,
-      p_is_urgent: urgent,
-      p_anon_id: getAnonId(),
-      p_visibility: visibility
-    });
-    if (error) {
-      alert(error.message || "Couldn't post that — please try again.");
+    let errMsg: string | null = null;
+    try {
+      const res = await fetch("/api/submit/post", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content,
+          category,
+          is_urgent: urgent,
+          anon_id: getAnonId(),
+          visibility
+        })
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        errMsg = json.error || "Couldn't post that — please try again.";
+      }
+    } catch {
+      errMsg = "Network error — please try again.";
+    }
+    if (errMsg) {
+      alert(errMsg);
       return;
     }
     recordPost();
@@ -161,11 +174,20 @@ export default function Home() {
     setLiked(next);
     persistLiked(next);
 
-    const { error } = await supabase.rpc("toggle_like", {
-      p_post_id: postId,
-      p_anon_id: anonId,
-      p_like: !isLiked
-    });
+    let error: { message: string } | null = null;
+    try {
+      const res = await fetch("/api/submit/like", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ post_id: postId, anon_id: anonId, like: !isLiked })
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        error = { message: json.error || "Couldn't save that — please try again." };
+      }
+    } catch {
+      error = { message: "Network error — please try again." };
+    }
 
     if (error) {
       // Roll back the optimistic change — the write didn't actually happen
