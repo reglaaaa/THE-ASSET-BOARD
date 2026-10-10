@@ -284,7 +284,7 @@ export default function TransparencyPage() {
                   day: "numeric"
                 })}
               </p>
-              <p className="whitespace-pre-wrap text-[14px] leading-relaxed text-[#f2ecdb]/90">
+              <p className="whitespace-pre-wrap break-words text-[14px] leading-relaxed text-[#f2ecdb]/90">
                 {a.body}
               </p>
             </div>
